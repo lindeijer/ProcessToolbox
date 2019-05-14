@@ -8,6 +8,8 @@ import nl.dgl.ptb.dsl.Step
 import com.mxgraph.view.mxGraph
 import com.mxgraph.swing.mxGraphComponent
 import com.mxgraph.layout.mxParallelEdgeLayout
+import com.mxgraph.layout.mxStackLayout
+import com.mxgraph.layout.hierarchical.mxHierarchicalLayout
 
 class ProcessSwingView(process: Process) extends Frame {
 
@@ -19,46 +21,37 @@ class ProcessSwingView(process: Process) extends Frame {
 
   graph.getModel().beginUpdate();
   
+  val layout =  new mxHierarchicalLayout(graph);
+
   try {
    viewStep(process.top,parent)
+   layout.execute(graph.getDefaultParent());
   } finally {
       graph.getModel().endUpdate();
   }
 
   val graphComponent = new mxGraphComponent(graph); 
-  
- // new mxParallelEdgeLayout().execute(trafficGraphVisual.getDefaultParent());
-
-  
-  
+    
   contents = Component.wrap(graphComponent)
   pack()
   centerOnScreen()
   open()
   
-  def viewStep(step:Step,parent:Any) {
+  def viewStep(step:Step,parent:Any) { // mxCell
     step match {
     case StepSequential(a,b) => {
-      val v1 = graph.insertVertex(parent, null, a.getClass.getName, 20, 20, 80,30);
-      val v2 = graph.insertVertex(parent, null, b.getClass.getName,  140, 150,80, 30);
+      val v1 = graph.insertVertex(parent, null, a.getClass.getName, 0, 0, 80,30); // 20, 20, 80,30 // x,y,w,h
+      val v2 = graph.insertVertex(parent, null, b.getClass.getName,  0, 0,80, 30); // 140, 150,80, 30
       graph.insertEdge(parent, null, "~>", v1, v2);  
-      val vSeq = graph.insertVertex(parent, null,null, 10, 10, 0,  0); 
+      val vSeq = graph.insertVertex(parent, null,null, 0, 0, 0,  0);
       graph.groupCells(vSeq, 1.0,Array(v1,v2)) 
     }
-    case StepConcurrent(a,b) =>
-      viewStepConcurrent(a,b)
+    case _ => {
+      graph.insertVertex(parent, null, step.getClass.getName, 0, 0, 80,30);
+    }
+    // case StepConcurrent(a,b) =>  viewStepConcurrent(a,b)
    } 
-    
-    
-  }
-
-  
-  def viewStepConcurrent(a:Step,b:Step) {
-    val v1 = graph.insertVertex(parent, null, a.getClass.getName, 20, 20, 80,
-        30);
-    val v2 = graph.insertVertex(parent, null, a.getClass.getName, 240, 150,
-        80, 30);
-    graph.insertEdge(parent, null, "&&", v1, v2);    
+       
   }
 
 
