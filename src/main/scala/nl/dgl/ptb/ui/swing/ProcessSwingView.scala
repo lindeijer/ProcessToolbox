@@ -24,7 +24,7 @@ class ProcessSwingView(process: Process) extends Frame {
   val layout =  new mxHierarchicalLayout(graph);
 
   try {
-   viewStep(process.top,parent)
+   viewStep(process.top,parent,lhs=true) // lhs=left-hand-side is irrelevant at the top.
    layout.execute(graph.getDefaultParent());
   } finally {
       graph.getModel().endUpdate();
@@ -36,24 +36,21 @@ class ProcessSwingView(process: Process) extends Frame {
   pack()
   centerOnScreen()
   open()
+ 
   
-  def viewStep(step:Step,parent:Any) { // mxCell
+  def viewStep(step:Step,parent:Any,lhs:Boolean):Object = { // mxCell
     step match {
-    case StepSequential(a,b) => {
-      val v1 = graph.insertVertex(parent, null, a.getClass.getName, 0, 0, 80,30); // 20, 20, 80,30 // x,y,w,h
-      val v2 = graph.insertVertex(parent, null, b.getClass.getName,  0, 0,80, 30); // 140, 150,80, 30
-      graph.insertEdge(parent, null, "~>", v1, v2);  
-      val vSeq = graph.insertVertex(parent, null,null, 0, 0, 0,  0);
-      graph.groupCells(vSeq, 1.0,Array(v1,v2)) 
+    case StepSequential(before,after) => {
+      val vBefore = viewStep(before,parent,lhs=true); 
+      val vAfter = viewStep(after,parent,lhs=false);
+      graph.insertEdge(parent, null, "~>", vBefore, vAfter);  
+      if (lhs) return vAfter else return vBefore
     }
     case _ => {
-      graph.insertVertex(parent, null, step.getClass.getName, 0, 0, 80,30);
+      return graph.insertVertex(parent, null, step.getClass.getName, 0, 0, 80,30);  // 20, 20, 80,30 // x,y,w,h
     }
-    // case StepConcurrent(a,b) =>  viewStepConcurrent(a,b)
-   } 
-       
+   }     
   }
-
-
+  
 }
 
