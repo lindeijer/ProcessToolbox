@@ -19,7 +19,7 @@ object Process {
 
 // ------
 
-class StepConcurrent(a:Step,b:Step) extends Step {
+case class StepConcurrent(a:Step,b:Step) extends Step {
   
   override def process(xnge:Exchange) = {
     a.process(xnge); 
@@ -29,7 +29,7 @@ class StepConcurrent(a:Step,b:Step) extends Step {
   
 }
 
-class StepSequential(val a:Step,val b:Step) extends Step {
+case class StepSequential(val a:Step,val b:Step) extends Step {
   
   override def process(xnge:Exchange) = {
     a.process(xnge)

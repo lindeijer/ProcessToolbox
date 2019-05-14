@@ -14,12 +14,15 @@ import nl.dgl.ptb.dsl.Step
 import nl.dgl.ptb.dsl.Process
 import nl.dgl.logces.Scanner
 import nl.dgl.logces.Product
+import nl.dgl.ptb.ui.swing.ProcessSwingView
 
 object BijStortVoorbereiding extends App  {
   
   val process = Process {
       ScanThePalletWithCode ~> ScanAnyPalletWithArticle ~> TransferItemsBetweenPallets
   }
+  
+  val processView = new ProcessSwingView(process);
   
   println("Hello bijstort: Transfer Goal")
   
