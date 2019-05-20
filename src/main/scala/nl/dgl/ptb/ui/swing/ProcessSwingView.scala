@@ -47,7 +47,7 @@ class ProcessSwingView(process: Process) extends Frame {
       if (lhs) return vAfter else return vBefore
     }
     case _ => {
-      return graph.insertVertex(parent, null, step.getClass.getName, 0, 0, 80,30);  // 20, 20, 80,30 // x,y,w,h
+      return graph.insertVertex(parent, null, step.getClass.getName, 0, 0, 80,30,"fillColor=green");  // 20, 20, 80,30 // x,y,w,h
     }
    }     
   }

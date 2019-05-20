@@ -80,6 +80,22 @@ abstract class Step  {
   
 }
 
+class StepFunction(f : Exchange=>Any) extends Step {
+  
+  override def process(xnge:Exchange) = {
+    f.apply(xnge)
+  }
+  
+}
+
+object Step extends StepFunction(null) {
+  
+  def apply(f : Exchange => Any):Step = {
+    return new StepFunction(f); 
+  }
+  
+}
+
 class Exchange extends HashMap[Any,Any] {
   
   def rename(oldKey:Any,newKey:Any) {

@@ -87,7 +87,6 @@ object Pallet {
     pallet
   }
   
-   
   def apply(barcode:String) = {
      pallets.find(_.code.equals(barcode));
   }
@@ -97,9 +96,12 @@ object Pallet {
   }  
    
   def transfer(src:Pallet,dst:Pallet,transferCount:Int) {
+    System.out.println("Pallet.transfer: before src="+src+",dst="+dst+",transferCount="+transferCount);
     src.itemCount = src.itemCount - transferCount
     dst.itemCount = dst.itemCount + transferCount
-   }
+    System.out.println("Pallet.transfer: after src="+src+",dst="+dst);
+       
+  }
   
   val rndm = new Random
 
