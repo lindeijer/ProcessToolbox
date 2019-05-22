@@ -7,15 +7,17 @@ import scala.swing.BoxPanel
 import scala.swing.Orientation
 import scala.swing.Button
 import scala.swing.Label
-import nl.dgl.ptb.dsl.ProcessListener
 import scala.swing.ListView
 import scala.collection.mutable.ListBuffer
+import nl.dgl.ptb.dsl.ExchangeEvent
+import nl.dgl.ptb.dsl.ProcessEvent
+import nl.dgl.ptb.dsl.ProcessExchangeChanged
 
-class BijStortVoorbereidingView(bsv:BijStortVoorbereiding)  extends Frame with ProcessListener {
+class BijStortVoorbereidingView(bsv:BijStortVoorbereiding)  extends Frame {
   
   val processView = new ProcessSwingView(bsv.process)
   
-  bsv.process.listeners += this;
+  bsv.process.listeners += notifyProcessChanged
   
   title = "BijStortVoorbereiding"
   val xxx : ListBuffer[String] = ListBuffer.empty
@@ -36,26 +38,21 @@ class BijStortVoorbereidingView(bsv:BijStortVoorbereiding)  extends Frame with P
   pack()
   centerOnScreen()
   open()
- 
+  
+  ///////////////////////////
+  
+  def notifyProcessChanged(processEvent: ProcessEvent) = {
+    processEvent match {
+      case ProcessExchangeChanged(process,xngeEvent) =>  notifyProcessExchangeChanged(xngeEvent)
+      case _ => println("dropped processEvent="+processEvent)
+    }    
+      
+  }
  
   //////////////////////////////
   
-  //sexchangeView.peer.getModel()
-  
-  def notifyProcessExchangePut(process: nl.dgl.ptb.dsl.Process,key: Any,value: Any): Unit = {
-    notifyProcessExchangeChanged("put: "+key+"="+value)
-  }
-  
-  def notifyProcessExchangeRemove(process: nl.dgl.ptb.dsl.Process,key: Any): Unit = {
-    notifyProcessExchangeChanged("remove: "+key)
-  }
-  
-  def notifyProcessExchangeRename(process: nl.dgl.ptb.dsl.Process,oldKey: Any,newKey: Any): Unit = {
-    notifyProcessExchangeChanged("rename: "+oldKey+"->"+newKey)  
-  }
-  
-  def notifyProcessExchangeChanged(reason:String): Unit = {
-    xxx += reason;
+  def notifyProcessExchangeChanged(xngeEvent:ExchangeEvent): Unit = {
+    xxx += xngeEvent.toString
     exchangeView.listData = xxx
     exchangeView.ensureIndexIsVisible(xxx.size)
   }

@@ -3,35 +3,24 @@ package nl.dgl.ptb.dsl
 import java.util.HashMap
 import scala.collection.mutable.ListBuffer
 
-trait ProcessListener {
-  
-    def notifyProcessExchangePut(process:Process,key:Any,value:Any);
-    def notifyProcessExchangeRename(process:Process,oldKey:Any,newKey:Any);
-    def notifyProcessExchangeRemove(process:Process,key:Any);
-}
+class ProcessEvent {}
+case class ProcessExchangeChanged(process:Process,xngeEvent:ExchangeEvent) extends ProcessEvent {}
 
-class Process(val top:Step) extends Step with ExchangeListener {
+class Process(val top:Step) extends Step {
   
   override def process(xnge:Exchange) = {
-    xnge.listeners += this
+    xnge.listeners += notifyExchangeChanged
     top.process(xnge)
-    xnge.listeners -= this
+    xnge.listeners -= notifyExchangeChanged
   }
   
-  //////////////
+  ////////////////////////
   
-  val listeners: ListBuffer[ProcessListener] = ListBuffer.empty
-  
-  override def notifyExchangePut(key:Any,value:Any) {
-    listeners.foreach(_.notifyProcessExchangePut(this,key, value))
+  def notifyExchangeChanged(xngeEvent: ExchangeEvent) = {
+    listeners.foreach(_.apply(ProcessExchangeChanged(this,xngeEvent)))
   }
   
-  override def notifyExchangeRename(oldKey:Any,newKey:Any) {
-    listeners.foreach(_.notifyProcessExchangeRename(this,oldKey, newKey))
-  }
-  override  def notifyExchangeRemove(key:Any) {
-    listeners.foreach(_.notifyProcessExchangeRemove(this,key))
-  }
+  val listeners: ListBuffer[ProcessEvent=>Unit] = ListBuffer.empty
 }
 
 object Process {
@@ -121,12 +110,11 @@ object Step extends StepFunction(null) {
   
 }
 
-trait ExchangeListener {
-    def notifyExchangePut(key:Any,value:Any);
-    def notifyExchangeRename(oldKey:Any,newKey:Any);
-    def notifyExchangeRemove(key:Any);
-}
-   
+class ExchangeEvent {}
+  case class ExchangePut(key:Any,value:Any) extends ExchangeEvent {}
+  case class ExchangeRemove(key:Any) extends ExchangeEvent {}
+  case class ExchangeRename(oldKey:Any,newKey:Any) extends ExchangeEvent {}
+  
 
 class Exchange {
   
@@ -137,25 +125,26 @@ class Exchange {
   } 
   
   def rename(oldKey:Any,newKey:Any) = {
-     listeners.foreach(_.notifyExchangeRename(oldKey,newKey))
+     listeners.foreach(_.apply(ExchangeRename(oldKey,newKey)))
      properties.put(newKey,properties.get(oldKey));
      properties.remove(oldKey)
   } 
   
   def put(key:Any,value:Any) = {
-    listeners.foreach(_.notifyExchangePut(key,value))
+    listeners.foreach(_.apply(ExchangePut(key,value)))
     properties.put(key, value);
   }
   
   def remove(key:Any) = {
-    listeners.foreach(_.notifyExchangeRemove(key))
+    listeners.foreach(_.apply(ExchangeRemove(key)))
     properties.remove(key);
   }
   
   def containsKey(key:Any) = {
     properties.containsKey(key);
   }
-  
-  val listeners: ListBuffer[ExchangeListener] = ListBuffer.empty
+   
+  val listeners: ListBuffer[ExchangeEvent=>Unit] = ListBuffer.empty
 
 }
+
