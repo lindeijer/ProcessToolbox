@@ -15,34 +15,51 @@ import nl.dgl.ptb.dsl.Process
 import nl.dgl.logces.Scanner
 import nl.dgl.logces.Product
 import nl.dgl.ptb.ui.swing.ProcessSwingView
+import nl.dgl.logces.PalletCode
+import nl.dgl.logces.ScanThePalletWithCode
+import nl.dgl.logces.TransferItemsBetweenPallets
+import nl.dgl.logces.ScanAnyPalletWithArticle
+import nl.dgl.logces.TransferItemCountBetweenPallets
+import nl.dgl.logces.SrcPallet
+import nl.dgl.logces.DstPallet
+import nl.dgl.bsv.ui.swing.BijStortVoorbereidingView
 
-object BijStortVoorbereiding extends App  {
+class BijStortVoorbereiding {
   
-  
-  val process = Process {
-      ScanThePalletWithCode ~> //
+  val process = Process 
+  {
       ScanAnyPalletWithArticle ~> //
+      Step (xnge => {
+        val palletWithArticle = xnge.get(ScanAnyPalletWithArticle).asInstanceOf[Pallet]
+        val bijstortAmount = xnge.get(BijstortAmount).asInstanceOf[Double]
+        val itemAmount = palletWithArticle.article.weight_kg
+        val bijstortItemCount = ( bijstortAmount / itemAmount ).toInt
+        val bijstortScoopAmount = bijstortAmount - (bijstortItemCount * palletWithArticle.article.weight_kg)
+        xnge.put(TransferItemCountBetweenPallets,bijstortItemCount)
+        xnge.put(BijstortScoopAmount,bijstortScoopAmount)
+      }) ~> //
+      ScanThePalletWithCode ~> //
       Step (xnge => {
         val srcPallet = xnge.get(ScanAnyPalletWithArticle).asInstanceOf[Pallet]
         val dstPallet = xnge.get(ScanThePalletWithCode).asInstanceOf[Pallet]
         xnge.put(SrcPallet,srcPallet)
         xnge.put(DstPallet,dstPallet)
-        
-        val bijstortAmount = xnge.get(BijstortAmount).asInstanceOf[Double]
-        val itemAmount = srcPallet.article.weight_kg
-        val bijstortItemCount = ( bijstortAmount / itemAmount ).toInt
-        xnge.put(TransferItemCountBetweenPallets,bijstortItemCount)
-        val bijstortScoopAmount = bijstortAmount - (bijstortItemCount * srcPallet.article.weight_kg)
-        xnge.put(BijstortScoopAmount,bijstortScoopAmount)
       }) ~> //
       TransferItemsBetweenPallets
   }
   
-  object BijstortScoopAmount {}
+}
+
+object BijstortAmount {}
+object BijstortScoopAmount {}
+
+//////////////////////////////////////////
+//////////////////////////////////////////
+//////////////////////////////////////////
+
+object MES_4C_LIENT extends App  {
   
-  val processView = new ProcessSwingView(process);
-  
-  println("Hello bijstort: Transfer Goal")
+  // environment 
   
   val product1 = Product("P1")
   
@@ -52,97 +69,23 @@ object BijStortVoorbereiding extends App  {
   Pallet("WarehousePallet1",article_P1_10,100)
   Pallet("BijstortPallet1",article_P1_20,50)
     
+  // runtime
+ 
+  val bsv = new BijStortVoorbereiding();
+  new BijStortVoorbereidingView(bsv);
+  
   val xnge = new Exchange();
+  
   xnge.put(Scanner, Scanner(1))
   xnge.put(PalletCode,"BijstortPallet1")
   xnge.put(Article,article_P1_10)
   xnge.put(BijstortAmount,101.101)
-
   
-  process.process(xnge)
+  bsv.process.process(xnge)
   
-  System.out.println("BijstortScoopAmount="+xnge.get(BijstortScoopAmount)
-)
-
+  println("TransferItemCountBetweenPallets="+xnge.get(TransferItemCountBetweenPallets))
+  println("BijstortScoopAmount="+xnge.get(BijstortScoopAmount))
   
 }  
 
-object BijstortAmount {}
-
-
-
-/////////////////////////////////////
-
-object TransferItemCountBetweenPallets {}
-
-
-class TransferItemsBetweenPallets extends Step {
-
-  override def process(xnge:Exchange) = {
-    val srcPallet = xnge.get(ScanAnyPalletWithArticle).asInstanceOf[Pallet]
-    val dstPallet = xnge.get(ScanThePalletWithCode).asInstanceOf[Pallet]
-    val transferItemCountBetweenPallets = xnge.get(TransferItemCountBetweenPallets).asInstanceOf[Int]
-    Pallet.transfer(srcPallet, dstPallet,transferItemCountBetweenPallets)
-  }
-}
-
-object TransferItemsBetweenPallets extends TransferItemsBetweenPallets {
   
-}
-
-/////////////////// ----
-
-
-// ----
-
-object SrcPallet {}
-object DstPallet {}
-
-object ScanAnyPalletWithArticle extends ScanPallet {
-  
-  override def process(xnge:Exchange) = {
-    val article = xnge.get(Article).asInstanceOf[Article]
-    println("ScanPalletWithArticle: Looking for any Pallet with article="+article)
-    xnge.remove(ScanAnyPalletWithArticle)
-    while (!xnge.containsKey(ScanAnyPalletWithArticle)) {
-      super.process(xnge)
-      val pallet = xnge.get(ScanPallet).asInstanceOf[Pallet]
-      if (pallet.article.equals(article)) {
-        println("ScanPalletWithArticle: Found " + pallet + " with article="+pallet.article)
-        xnge.put(ScanAnyPalletWithArticle,pallet)
-      } else {
-        println("ScanPalletWithArticle: Wrong " + pallet + " with article="+pallet.article)
-      }
-    }
-    
-  }
-}
-
-
-
-// ----
-
-object ScanThePalletWithCode extends ScanPallet {
-  override def process(xnge:Exchange) = {
-    val code = xnge.get(PalletCode).asInstanceOf[String]
-    println("ScanThePalletWithCode: Looking for the Pallet with code="+code)
-    xnge.remove(ScanThePalletWithCode)
-    while (!xnge.containsKey(ScanThePalletWithCode)) {
-      super.process(xnge)
-      val pallet = xnge.get(ScanPallet).asInstanceOf[Pallet]
-      if (pallet.code.equals(code)) {
-        println("ScanThePalletWithCode: Found "+ pallet)
-        xnge.put(ScanThePalletWithCode,pallet)
-      } else {
-        println("ScanThePalletWithCode: Wrong " + pallet)
-      }
-    }
-  }
-}
-
-object PalletCode {}
-
-
-// ===========================
-
-

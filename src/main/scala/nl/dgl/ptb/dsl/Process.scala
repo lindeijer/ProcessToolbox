@@ -1,11 +1,36 @@
 package nl.dgl.ptb.dsl
 
 import java.util.HashMap
+import scala.collection.mutable.ListBuffer
 
-class Process(val top:Step) extends Step {
+trait ProcessListener {
+  
+    def notifyProcessExchangePut(process:Process,key:Any,value:Any);
+    def notifyProcessExchangeRename(process:Process,oldKey:Any,newKey:Any);
+    def notifyProcessExchangeRemove(process:Process,key:Any);
+}
+
+class Process(val top:Step) extends Step with ExchangeListener {
   
   override def process(xnge:Exchange) = {
-      top.process(xnge)
+    xnge.listeners += this
+    top.process(xnge)
+    xnge.listeners -= this
+  }
+  
+  //////////////
+  
+  val listeners: ListBuffer[ProcessListener] = ListBuffer.empty
+  
+  override def notifyExchangePut(key:Any,value:Any) {
+    listeners.foreach(_.notifyProcessExchangePut(this,key, value))
+  }
+  
+  override def notifyExchangeRename(oldKey:Any,newKey:Any) {
+    listeners.foreach(_.notifyProcessExchangeRename(this,oldKey, newKey))
+  }
+  override  def notifyExchangeRemove(key:Any) {
+    listeners.foreach(_.notifyProcessExchangeRemove(this,key))
   }
 }
 
@@ -96,12 +121,41 @@ object Step extends StepFunction(null) {
   
 }
 
-class Exchange extends HashMap[Any,Any] {
+trait ExchangeListener {
+    def notifyExchangePut(key:Any,value:Any);
+    def notifyExchangeRename(oldKey:Any,newKey:Any);
+    def notifyExchangeRemove(key:Any);
+}
+   
+
+class Exchange {
   
-  def rename(oldKey:Any,newKey:Any) {
-     this.put(newKey,this.get(oldKey));
-     this.remove(oldKey)
-     
-  }  
+  private val properties = new HashMap[Any,Any]
   
+  def get(key:Any) = {
+     properties.get(key);
+  } 
+  
+  def rename(oldKey:Any,newKey:Any) = {
+     listeners.foreach(_.notifyExchangeRename(oldKey,newKey))
+     properties.put(newKey,properties.get(oldKey));
+     properties.remove(oldKey)
+  } 
+  
+  def put(key:Any,value:Any) = {
+    listeners.foreach(_.notifyExchangePut(key,value))
+    properties.put(key, value);
+  }
+  
+  def remove(key:Any) = {
+    listeners.foreach(_.notifyExchangeRemove(key))
+    properties.remove(key);
+  }
+  
+  def containsKey(key:Any) = {
+    properties.containsKey(key);
+  }
+  
+  val listeners: ListBuffer[ExchangeListener] = ListBuffer.empty
+
 }

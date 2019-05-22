@@ -3,6 +3,7 @@ package nl.dgl.logces
 import scala.collection.mutable.ListBuffer
 import scala.util.Random
 import nl.dgl.ptb.dsl.Exchange
+import nl.dgl.ptb.dsl.Step
 
 
 case class Product(code:String) {} 
@@ -96,10 +97,10 @@ object Pallet {
   }  
    
   def transfer(src:Pallet,dst:Pallet,transferCount:Int) {
-    System.out.println("Pallet.transfer: before src="+src+",dst="+dst+",transferCount="+transferCount);
+    println("Pallet.transfer: before src="+src+",dst="+dst+",transferCount="+transferCount);
     src.itemCount = src.itemCount - transferCount
     dst.itemCount = dst.itemCount + transferCount
-    System.out.println("Pallet.transfer: after src="+src+",dst="+dst);
+    println("Pallet.transfer: after src="+src+",dst="+dst);
        
   }
   
@@ -126,4 +127,79 @@ class ScanPallet extends Scan {
 }
 
 object ScanPallet {}
+
+///////////////////////////////////////////////////
+
+object SrcPallet {}
+object DstPallet {}
+object TransferItemCountBetweenPallets {}
+
+class TransferItemsBetweenPallets extends Step {
+
+  override def process(xnge:Exchange) = {
+    val srcPallet = xnge.get(SrcPallet).asInstanceOf[Pallet]
+    val dstPallet = xnge.get(DstPallet).asInstanceOf[Pallet]
+    val transferItemCountBetweenPallets = xnge.get(TransferItemCountBetweenPallets).asInstanceOf[Int]
+    Pallet.transfer(srcPallet, dstPallet,transferItemCountBetweenPallets)
+  }
+}
+
+object TransferItemsBetweenPallets extends TransferItemsBetweenPallets {}
+
+// ----
+
+object ScanAnyPalletWithArticle extends ScanPallet {
+  
+  override def process(xnge:Exchange) = {
+    val article = xnge.get(Article).asInstanceOf[Article]
+    println("ScanPalletWithArticle: Looking for any Pallet with article="+article)
+    xnge.remove(ScanAnyPalletWithArticle)
+    while (!xnge.containsKey(ScanAnyPalletWithArticle)) {
+      super.process(xnge)
+      val pallet = xnge.get(ScanPallet).asInstanceOf[Pallet]
+      if (pallet.article.equals(article)) {
+        println("ScanPalletWithArticle: Found " + pallet + " with article="+pallet.article)
+        xnge.put(ScanAnyPalletWithArticle,pallet)
+      } else {
+        println("ScanPalletWithArticle: Wrong " + pallet + " with article="+pallet.article)
+      }
+    }
+    
+  }
+}
+
+// ----
+
+object ScanThePalletWithCode extends ScanPallet {
+  override def process(xnge:Exchange) = {
+    val code = xnge.get(PalletCode).asInstanceOf[String]
+    println("ScanThePalletWithCode: Looking for the Pallet with code="+code)
+    xnge.remove(ScanThePalletWithCode)
+    while (!xnge.containsKey(ScanThePalletWithCode)) {
+      super.process(xnge)
+      val pallet = xnge.get(ScanPallet).asInstanceOf[Pallet]
+      if (pallet.code.equals(code)) {
+        println("ScanThePalletWithCode: Found "+ pallet)
+        xnge.put(ScanThePalletWithCode,pallet)
+      } else {
+        println("ScanThePalletWithCode: Wrong " + pallet)
+      }
+    }
+  }
+}
+
+object PalletCode {}
+
+
+
+
+
+
+
+
+
+
+
+
+
 

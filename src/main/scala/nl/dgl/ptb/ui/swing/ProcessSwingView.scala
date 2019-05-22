@@ -11,9 +11,7 @@ import com.mxgraph.layout.mxParallelEdgeLayout
 import com.mxgraph.layout.mxStackLayout
 import com.mxgraph.layout.hierarchical.mxHierarchicalLayout
 
-class ProcessSwingView(process: Process) extends Frame {
-
-  title = "Hello Process"
+class ProcessSwingView(process: Process) extends Component {
 
   val graph = new mxGraph();
 
@@ -24,19 +22,17 @@ class ProcessSwingView(process: Process) extends Frame {
   val layout =  new mxHierarchicalLayout(graph);
 
   try {
-   viewStep(process.top,parent,lhs=true) // lhs=left-hand-side is irrelevant at the top.
-   layout.execute(graph.getDefaultParent());
+      viewStep(process.top,parent,lhs=true) // lhs=left-hand-side is irrelevant at the top.
+      layout.execute(graph.getDefaultParent());
   } finally {
       graph.getModel().endUpdate();
   }
 
-  val graphComponent = new mxGraphComponent(graph); 
+  private val graphComponent = new mxGraphComponent(graph); 
+  
+  val component = Component.wrap(graphComponent)
     
-  contents = Component.wrap(graphComponent)
-  pack()
-  centerOnScreen()
-  open()
- 
+  /////////////////////////////////////////////
   
   def viewStep(step:Step,parent:Any,lhs:Boolean):Object = { // mxCell
     step match {
@@ -53,4 +49,3 @@ class ProcessSwingView(process: Process) extends Frame {
   }
   
 }
-
