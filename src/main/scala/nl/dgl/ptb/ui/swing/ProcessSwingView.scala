@@ -18,34 +18,34 @@ class ProcessSwingView(process: Process) extends Component {
   val parent = graph.getDefaultParent();
 
   graph.getModel().beginUpdate();
-  
-  val layout =  new mxHierarchicalLayout(graph);
+
+  val layout = new mxHierarchicalLayout(graph);
 
   try {
-      viewStep(process.top,parent,lhs=true) // lhs=left-hand-side is irrelevant at the top.
-      layout.execute(graph.getDefaultParent());
+    viewStep(process.top, parent, lhs = true) // lhs=left-hand-side is irrelevant at the top.
+    layout.execute(graph.getDefaultParent());
   } finally {
-      graph.getModel().endUpdate();
+    graph.getModel().endUpdate();
   }
 
-  private val graphComponent = new mxGraphComponent(graph); 
-  
+  private val graphComponent = new mxGraphComponent(graph);
+
   val component = Component.wrap(graphComponent)
-    
+
   /////////////////////////////////////////////
-  
-  def viewStep(step:Step,parent:Any,lhs:Boolean):Object = { // mxCell
+
+  def viewStep(step: Step, parent: Any, lhs: Boolean): Object = { // mxCell
     step match {
-    case StepSequential(before,after) => {
-      val vBefore = viewStep(before,parent,lhs=true); 
-      val vAfter = viewStep(after,parent,lhs=false);
-      graph.insertEdge(parent, null, "~>", vBefore, vAfter);  
-      if (lhs) return vAfter else return vBefore
+      case StepSequential(before, after) => {
+        val vBefore = viewStep(before, parent, lhs = true);
+        val vAfter = viewStep(after, parent, lhs = false);
+        graph.insertEdge(parent, null, "~>", vBefore, vAfter);
+        if (lhs) return vAfter else return vBefore
+      }
+      case _ => {
+        return graph.insertVertex(parent, null, step.getClass.getName, 0, 0, 80, 30, "fillColor=green"); // 20, 20, 80,30 // x,y,w,h
+      }
     }
-    case _ => {
-      return graph.insertVertex(parent, null, step.getClass.getName, 0, 0, 80,30,"fillColor=green");  // 20, 20, 80,30 // x,y,w,h
-    }
-   }     
   }
-  
+
 }

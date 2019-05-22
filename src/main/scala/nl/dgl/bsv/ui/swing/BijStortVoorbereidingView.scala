@@ -13,50 +13,44 @@ import nl.dgl.ptb.dsl.ExchangeEvent
 import nl.dgl.ptb.dsl.ProcessEvent
 import nl.dgl.ptb.dsl.ProcessExchangeChanged
 
-class BijStortVoorbereidingView(bsv:BijStortVoorbereiding)  extends Frame {
-  
-  val processView = new ProcessSwingView(bsv.process)
-  
-  bsv.process.listeners += notifyProcessChanged
-  
-  title = "BijStortVoorbereiding"
-  val xxx : ListBuffer[String] = ListBuffer.empty
-  
-  val exchangeView = new ListView[String](xxx);
-  
-  
-  val topBox = new BoxPanel(Orientation.Horizontal) {
-    contents += processView.component // left
-   // contents += new Label("AA") // left
-    contents += exchangeView  // right  
-   // contents += new Label("BB") // left
+class BijStortVoorbereidingView(bsv: BijStortVoorbereiding) extends Frame {
 
+  val processView = new ProcessSwingView(bsv.process)
+
+  bsv.process.listeners += notifyProcessChanged
+
+  title = "BijStortVoorbereiding"
+  val xxx: ListBuffer[String] = ListBuffer.empty
+
+  val exchangeView = new ListView[String](xxx);
+
+  val topBox = new BoxPanel(Orientation.Horizontal) {
+    contents += processView.component
+    contents += exchangeView
   }
 
   contents = topBox
-  
+
   pack()
   centerOnScreen()
   open()
-  
+
   ///////////////////////////
-  
+
   def notifyProcessChanged(processEvent: ProcessEvent) = {
     processEvent match {
-      case ProcessExchangeChanged(process,xngeEvent) =>  notifyProcessExchangeChanged(xngeEvent)
-      case _ => println("dropped processEvent="+processEvent)
-    }    
-      
+      case ProcessExchangeChanged(process, xngeEvent) => notifyProcessExchangeChanged(xngeEvent)
+      case _ => println("dropped processEvent=" + processEvent)
+    }
+
   }
- 
+
   //////////////////////////////
-  
-  def notifyProcessExchangeChanged(xngeEvent:ExchangeEvent): Unit = {
+
+  def notifyProcessExchangeChanged(xngeEvent: ExchangeEvent): Unit = {
     xxx += xngeEvent.toString
     exchangeView.listData = xxx
     exchangeView.ensureIndexIsVisible(xxx.size)
   }
-  
 
 }
-
