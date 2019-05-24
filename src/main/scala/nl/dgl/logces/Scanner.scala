@@ -40,7 +40,7 @@ class Scan extends Step {
    */
   override def process(xnge: Exchange) = {
     val scanner = xnge.get(Scanner).asInstanceOf[Scanner]
-    xnge.put(ScannerEvent, scanner.scan())
+    xnge.stash_put(ScannerEvent, scanner.scan())
   }
 }
 

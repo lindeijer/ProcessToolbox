@@ -120,8 +120,8 @@ class ScanPallet extends Scan {
    */
   override def process(xnge: Exchange) = {
     super.process(xnge)
-    val palletBarcode = xnge.get(ScannerEvent).asInstanceOf[ScannerEvent].code
-    xnge.put(ScanPallet, Pallet(palletBarcode).get)
+    val palletBarcode = xnge.stash_get(ScannerEvent).asInstanceOf[ScannerEvent].code
+    xnge.stash_put(ScanPallet, Pallet(palletBarcode).get)
   }
 }
 
@@ -155,7 +155,7 @@ object ScanAnyPalletWithArticle extends ScanPallet {
     xnge.remove(ScanAnyPalletWithArticle)
     while (!xnge.containsKey(ScanAnyPalletWithArticle)) {
       super.process(xnge)
-      val pallet = xnge.get(ScanPallet).asInstanceOf[Pallet]
+      val pallet = xnge.stash_get(ScanPallet).asInstanceOf[Pallet]
       if (pallet.article.equals(article)) {
         println("ScanPalletWithArticle: Found " + pallet + " with article=" + pallet.article)
         xnge.put(ScanAnyPalletWithArticle, pallet)
@@ -176,7 +176,7 @@ object ScanThePalletWithCode extends ScanPallet {
     xnge.remove(ScanThePalletWithCode)
     while (!xnge.containsKey(ScanThePalletWithCode)) {
       super.process(xnge)
-      val pallet = xnge.get(ScanPallet).asInstanceOf[Pallet]
+      val pallet = xnge.stash_get(ScanPallet).asInstanceOf[Pallet]
       if (pallet.code.equals(code)) {
         println("ScanThePalletWithCode: Found " + pallet)
         xnge.put(ScanThePalletWithCode, pallet)

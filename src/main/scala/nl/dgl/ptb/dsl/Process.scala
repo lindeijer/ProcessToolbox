@@ -145,4 +145,29 @@ class Exchange {
 
   val listeners: ListBuffer[ExchangeEvent => Unit] = ListBuffer.empty
 
+  // ----
+
+  private val stash = new HashMap[Any, Any]
+
+  def stash_get(key: Any) = {
+    stash.get(key);
+  }
+
+  def stash_rename(oldKey: Any, newKey: Any) = {
+    stash.put(newKey, properties.get(oldKey));
+    stash.remove(oldKey)
+  }
+
+  def stash_put(key: Any, value: Any) = {
+    stash.put(key, value);
+  }
+
+  def stash_remove(key: Any) = {
+    stash.remove(key);
+  }
+
+  def stash_containsKey(key: Any) = {
+    stash.containsKey(key);
+  }
+
 }
