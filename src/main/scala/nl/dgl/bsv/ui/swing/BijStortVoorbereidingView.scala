@@ -12,6 +12,8 @@ import scala.collection.mutable.ListBuffer
 import nl.dgl.ptb.dsl.ExchangeEvent
 import nl.dgl.ptb.dsl.ProcessEvent
 import nl.dgl.ptb.dsl.ProcessExchangeChanged
+import nl.dgl.ptb.dsl.ProcessStepChanged
+import nl.dgl.ptb.dsl.StepEvent
 
 class BijStortVoorbereidingView(bsv: BijStortVoorbereiding) extends Frame {
 
@@ -40,6 +42,7 @@ class BijStortVoorbereidingView(bsv: BijStortVoorbereiding) extends Frame {
   def notifyProcessChanged(processEvent: ProcessEvent) = {
     processEvent match {
       case ProcessExchangeChanged(process, xngeEvent) => notifyProcessExchangeChanged(xngeEvent)
+      case ProcessStepChanged(process, stepEvent) => notifyProcessStepChanged(stepEvent)
       case _ => println("dropped processEvent=" + processEvent)
     }
 
@@ -51,6 +54,10 @@ class BijStortVoorbereidingView(bsv: BijStortVoorbereiding) extends Frame {
     xxx += xngeEvent.toString
     exchangeView.listData = xxx
     exchangeView.ensureIndexIsVisible(xxx.size)
+  }
+
+  def notifyProcessStepChanged(stepEvent: StepEvent): Unit = {
+    println("stepEvent=" + stepEvent)
   }
 
 }

@@ -2,15 +2,19 @@ package nl.dgl.ptb.dsl
 
 import java.util.HashMap
 import scala.collection.mutable.ListBuffer
+import java.time.Instant
 
 class ProcessEvent {}
 case class ProcessExchangeChanged(process: Process, xngeEvent: ExchangeEvent) extends ProcessEvent {}
+case class ProcessStepChanged(process: Process, xngeEvent: StepEvent) extends ProcessEvent {}
 
-class Process(val top: Step) extends Step {
+class Process(val top: Step) {
 
-  override def process(xnge: Exchange) = {
+  def process(xnge: Exchange) = {
     xnge.listeners += notifyExchangeChanged
+    top.listeners += notifyStepChanged
     top.process(xnge)
+    top.listeners -= notifyStepChanged
     xnge.listeners -= notifyExchangeChanged
   }
 
@@ -18,6 +22,10 @@ class Process(val top: Step) extends Step {
 
   def notifyExchangeChanged(xngeEvent: ExchangeEvent) = {
     listeners.foreach(_.apply(ProcessExchangeChanged(this, xngeEvent)))
+  }
+
+  def notifyStepChanged(stepEvent: StepEvent) = {
+    listeners.foreach(_.apply(ProcessStepChanged(this, stepEvent)))
   }
 
   val listeners: ListBuffer[ProcessEvent => Unit] = ListBuffer.empty
@@ -35,26 +43,46 @@ object Process {
 
 case class StepConcurrent(a: Step, b: Step) extends Step {
 
+  override def apply(xnge: Exchange) = {}
+
   override def process(xnge: Exchange) = {
-    a.process(xnge);
+    // concurrent implies any interleaving allowed, including sequential which is what we do for now.
+    a.listeners += notifySubStepChanged
+    a.process(xnge)
+    a.listeners -= notifySubStepChanged
+    b.listeners += notifySubStepChanged
     b.process(xnge);
-    // concurrent implies any interleaving allowed, including sequential.
+    b.listeners -= notifySubStepChanged
+  }
+
+  def notifySubStepChanged(subStepEvent: StepEvent) = {
+    listeners.foreach(_.apply(subStepEvent))
   }
 
 }
 
 case class StepSequential(val a: Step, val b: Step) extends Step {
 
+  override def apply(xnge: Exchange) = {}
+
   override def process(xnge: Exchange) = {
+    a.listeners += notifySubStepChanged
     a.process(xnge)
+    a.listeners -= notifySubStepChanged
+    b.listeners += notifySubStepChanged
     b.process(xnge);
+    b.listeners -= notifySubStepChanged
+  }
+
+  def notifySubStepChanged(subStepEvent: StepEvent) = {
+    listeners.foreach(_.apply(subStepEvent))
   }
 
 }
 
 class StepChoice(steps: Vector[Step], chooser: String) extends Step {
 
-  override def process(xnge: Exchange) = {
+  override def apply(xnge: Exchange) = {
     val chosenIndex = xnge.get(chooser).asInstanceOf[Int]
     val chosenStep = steps(chosenIndex)
     chosenStep.process(xnge)
@@ -64,7 +92,7 @@ class StepChoice(steps: Vector[Step], chooser: String) extends Step {
 
 class StepSplit(in: String, out: String, step: Step) extends Step {
 
-  override def process(xnge: Exchange) = {
+  override def apply(xnge: Exchange) = {
     val inputList = xnge.get(in).asInstanceOf[List[Any]]
     val outputMap = new HashMap[Any, Any]
     inputList.foreach(input => {
@@ -78,6 +106,10 @@ class StepSplit(in: String, out: String, step: Step) extends Step {
 
 }
 
+class StepEvent(step: Step, instant: Instant) {}
+case class StepStarted(step: Step, instant: Instant) extends StepEvent(step, instant) {}
+case class StepFinished(step: Step, instant: Instant) extends StepEvent(step, instant) {}
+
 abstract class Step {
 
   def ~>(next: Step): Step = {
@@ -88,15 +120,27 @@ abstract class Step {
     new StepConcurrent(this, next)
   }
 
+  /**
+   * Execute the step's function. User extensions of this class must override this method.
+   */
+  def apply(xnge: Exchange)
+
+  /**
+   * Execute the step. User extensions of this class should not override this method.
+   */
   def process(xnge: Exchange) = {
-    println("Step[" + this.getClass.getName + "]")
+    listeners.foreach(_.apply(new StepStarted(this, Instant.now)))
+    apply(xnge)
+    listeners.foreach(_.apply(new StepFinished(this, Instant.now)))
   }
+
+  val listeners: ListBuffer[StepEvent => Unit] = ListBuffer.empty
 
 }
 
 class StepFunction(f: Exchange => Any) extends Step {
 
-  override def process(xnge: Exchange) = {
+  override def apply(xnge: Exchange) = {
     f.apply(xnge)
   }
 
