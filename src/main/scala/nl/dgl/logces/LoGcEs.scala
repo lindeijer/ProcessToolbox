@@ -165,8 +165,6 @@ object ScanAnyPalletWithArticle extends ScanPallet {
     }
   }
 
-  def get(xnge: Exchange): Pallet = xnge.get(ScanAnyPalletWithArticle).asInstanceOf[Pallet]
-
 }
 
 // ----

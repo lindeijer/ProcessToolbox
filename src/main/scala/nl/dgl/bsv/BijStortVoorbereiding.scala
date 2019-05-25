@@ -29,8 +29,8 @@ class BijStortVoorbereiding {
   val process = Process {
     ScanAnyPalletWithArticle ~> //
       Step(xnge => {
-        val palletWithArticle = xnge.get(ScanAnyPalletWithArticle).asInstanceOf[Pallet]
-        val bijstortAmount = xnge.get(BijstortAmount).asInstanceOf[Double]
+        val palletWithArticle = xnge.get[Pallet](ScanAnyPalletWithArticle)
+        val bijstortAmount = xnge.get[Double](BijstortAmount)
         val itemAmount = palletWithArticle.article.weight_kg
         val bijstortItemCount = (bijstortAmount / itemAmount).toInt
         val bijstortScoopAmount = bijstortAmount - (bijstortItemCount * palletWithArticle.article.weight_kg)
@@ -39,8 +39,8 @@ class BijStortVoorbereiding {
       }) ~> //
       ScanThePalletWithCode ~> //
       Step(xnge => {
-        val srcPallet = xnge.get(ScanAnyPalletWithArticle).asInstanceOf[Pallet]
-        val dstPallet = xnge.get(ScanThePalletWithCode).asInstanceOf[Pallet]
+        val srcPallet = xnge.get[Pallet](ScanAnyPalletWithArticle)
+        val dstPallet = xnge.get[Pallet](ScanThePalletWithCode)
         xnge.put(SrcPallet, srcPallet)
         xnge.put(DstPallet, dstPallet)
       }) ~> //

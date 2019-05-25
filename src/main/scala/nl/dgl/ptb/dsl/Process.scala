@@ -166,11 +166,11 @@ class Exchange {
 
   private val properties = new HashMap[Any, Any]
 
-  def get(key: Any) = {
+  def get[T](key: Any): T = {
     if (key == null) {
       throw new IllegalArgumentException("The key may not be null.");
     }
-    properties.get(key);
+    properties.get(key).asInstanceOf[T];
   }
 
   def rename(oldKey: Any, newKey: Any) = {
