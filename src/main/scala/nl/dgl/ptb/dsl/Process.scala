@@ -120,26 +120,57 @@ class Exchange {
   private val properties = new HashMap[Any, Any]
 
   def get(key: Any) = {
+    if (key == null) {
+      throw new IllegalArgumentException("The key may not be null.");
+    }
     properties.get(key);
   }
 
   def rename(oldKey: Any, newKey: Any) = {
+    if (oldKey == null) {
+      if (newKey == null) {
+        throw new IllegalArgumentException("Neither old-key nor new-key may be null, and both are null.");
+      } else {
+        throw new IllegalArgumentException("The old-key may not be null. Attempted with new-key=" + newKey);
+      }
+    }
+    if (newKey == null) {
+      throw new IllegalArgumentException("The new-key not be null. Allempted with old-key=" + oldKey);
+    }
     listeners.foreach(_.apply(ExchangeRename(oldKey, newKey)))
     properties.put(newKey, properties.get(oldKey));
     properties.remove(oldKey)
   }
 
   def put(key: Any, value: Any) = {
+    if (key == null) {
+      if (value == null) {
+        throw new IllegalArgumentException("Neither value nor key may be null, and both are null.");
+      } else {
+        throw new IllegalArgumentException("The key may not be null. Allempted use with value=" + value);
+      }
+    }
+    if (value == null) {
+      throw new IllegalArgumentException("The value may not be null. key=" + key);
+    }
     listeners.foreach(_.apply(ExchangePut(key, value)))
     properties.put(key, value);
   }
 
   def remove(key: Any) = {
-    listeners.foreach(_.apply(ExchangeRemove(key)))
-    properties.remove(key);
+    if (key == null) {
+      throw new IllegalArgumentException("The key may not be null.");
+    }
+    if (properties.containsKey(key)) {
+      listeners.foreach(_.apply(ExchangeRemove(key)))
+      properties.remove(key);
+    }
   }
 
   def containsKey(key: Any) = {
+    if (key == null) {
+      throw new IllegalArgumentException("The key may not be null.");
+    }
     properties.containsKey(key);
   }
 
