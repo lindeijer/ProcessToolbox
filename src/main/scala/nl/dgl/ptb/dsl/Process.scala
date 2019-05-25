@@ -106,9 +106,12 @@ class StepSplit(in: String, out: String, step: Step) extends Step {
 
 }
 
-class StepEvent(step: Step, instant: Instant) {}
-case class StepStarted(step: Step, instant: Instant) extends StepEvent(step, instant) {}
-case class StepFinished(step: Step, instant: Instant) extends StepEvent(step, instant) {}
+trait StepEvent {
+  val step: Step
+  val instant: Instant
+}
+case class StepStarted(step: Step, instant: Instant) extends StepEvent {}
+case class StepFinished(step: Step, instant: Instant) extends StepEvent {}
 
 abstract class Step {
 

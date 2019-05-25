@@ -10,6 +10,10 @@ import com.mxgraph.swing.mxGraphComponent
 import com.mxgraph.layout.mxParallelEdgeLayout
 import com.mxgraph.layout.mxStackLayout
 import com.mxgraph.layout.hierarchical.mxHierarchicalLayout
+import nl.dgl.ptb.dsl.StepEvent
+import scala.collection.mutable.ListBuffer
+import scala.collection.mutable.HashMap
+import com.mxgraph.model.mxCell
 
 class ProcessSwingView(process: Process) extends Component {
 
@@ -20,6 +24,8 @@ class ProcessSwingView(process: Process) extends Component {
   graph.getModel().beginUpdate();
 
   val layout = new mxHierarchicalLayout(graph);
+
+  val step2view: HashMap[Step, Object] = HashMap.empty
 
   try {
     viewStep(process.top, parent, lhs = true) // lhs=left-hand-side is irrelevant at the top.
@@ -43,9 +49,17 @@ class ProcessSwingView(process: Process) extends Component {
         if (lhs) return vAfter else return vBefore
       }
       case _ => {
-        return graph.insertVertex(parent, null, step.getClass.getName, 0, 0, 80, 30, "fillColor=green"); // 20, 20, 80,30 // x,y,w,h
+        val vertex = graph.insertVertex(parent, null, step.getClass.getName, 0, 0, 80, 30, "fillColor=green"); // 20, 20, 80,30 // x,y,w,h
+        step2view.put(step, vertex)
+        return vertex
       }
     }
+  }
+
+  def notifyProcessStepChanged(stepEvent: StepEvent): Unit = {
+    step2view.get(stepEvent.step).foreach(view => {
+      graph.setCellStyle("fillColor=blue", Array(view))
+    })
   }
 
 }

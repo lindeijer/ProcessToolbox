@@ -22,9 +22,9 @@ class BijStortVoorbereidingView(bsv: BijStortVoorbereiding) extends Frame {
   bsv.process.listeners += notifyProcessChanged
 
   title = "BijStortVoorbereiding"
-  val xxx: ListBuffer[String] = ListBuffer.empty
+  val exchangeEvents: ListBuffer[String] = ListBuffer.empty
 
-  val exchangeView = new ListView[String](xxx);
+  val exchangeView = new ListView[String](exchangeEvents);
 
   val topBox = new BoxPanel(Orientation.Horizontal) {
     contents += processView.component
@@ -42,7 +42,7 @@ class BijStortVoorbereidingView(bsv: BijStortVoorbereiding) extends Frame {
   def notifyProcessChanged(processEvent: ProcessEvent) = {
     processEvent match {
       case ProcessExchangeChanged(process, xngeEvent) => notifyProcessExchangeChanged(xngeEvent)
-      case ProcessStepChanged(process, stepEvent) => notifyProcessStepChanged(stepEvent)
+      case ProcessStepChanged(process, stepEvent) => processView.notifyProcessStepChanged(stepEvent)
       case _ => println("dropped processEvent=" + processEvent)
     }
 
@@ -51,13 +51,9 @@ class BijStortVoorbereidingView(bsv: BijStortVoorbereiding) extends Frame {
   //////////////////////////////
 
   def notifyProcessExchangeChanged(xngeEvent: ExchangeEvent): Unit = {
-    xxx += xngeEvent.toString
-    exchangeView.listData = xxx
-    exchangeView.ensureIndexIsVisible(xxx.size)
-  }
-
-  def notifyProcessStepChanged(stepEvent: StepEvent): Unit = {
-    println("stepEvent=" + stepEvent)
+    exchangeEvents += xngeEvent.toString
+    exchangeView.listData = exchangeEvents
+    exchangeView.ensureIndexIsVisible(exchangeEvents.size)
   }
 
 }
