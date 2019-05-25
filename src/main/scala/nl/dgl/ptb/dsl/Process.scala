@@ -43,7 +43,7 @@ object Process {
 
 case class StepConcurrent(a: Step, b: Step) extends Step {
 
-  override def apply(xnge: Exchange) = {}
+  override def step(xnge: Exchange) = {}
 
   override def process(xnge: Exchange) = {
     // concurrent implies any interleaving allowed, including sequential which is what we do for now.
@@ -63,7 +63,7 @@ case class StepConcurrent(a: Step, b: Step) extends Step {
 
 case class StepSequential(val a: Step, val b: Step) extends Step {
 
-  override def apply(xnge: Exchange) = {}
+  override def step(xnge: Exchange) = {}
 
   override def process(xnge: Exchange) = {
     a.listeners += notifySubStepChanged
@@ -82,7 +82,7 @@ case class StepSequential(val a: Step, val b: Step) extends Step {
 
 class StepChoice(steps: Vector[Step], chooser: String) extends Step {
 
-  override def apply(xnge: Exchange) = {
+  override def step(xnge: Exchange) = {
     val chosenIndex = xnge.get(chooser).asInstanceOf[Int]
     val chosenStep = steps(chosenIndex)
     chosenStep.process(xnge)
@@ -92,7 +92,7 @@ class StepChoice(steps: Vector[Step], chooser: String) extends Step {
 
 class StepSplit(in: String, out: String, step: Step) extends Step {
 
-  override def apply(xnge: Exchange) = {
+  override def step(xnge: Exchange) = {
     val inputList = xnge.get(in).asInstanceOf[List[Any]]
     val outputMap = new HashMap[Any, Any]
     inputList.foreach(input => {
@@ -126,14 +126,14 @@ abstract class Step {
   /**
    * Execute the step's function. User extensions of this class must override this method.
    */
-  def apply(xnge: Exchange)
+  def step(xnge: Exchange)
 
   /**
    * Execute the step. User extensions of this class should not override this method.
    */
   def process(xnge: Exchange) = {
     listeners.foreach(_.apply(new StepStarted(this, Instant.now)))
-    apply(xnge)
+    step(xnge)
     listeners.foreach(_.apply(new StepFinished(this, Instant.now)))
   }
 
@@ -143,7 +143,7 @@ abstract class Step {
 
 class StepFunction(f: Exchange => Any) extends Step {
 
-  override def apply(xnge: Exchange) = {
+  override def step(xnge: Exchange) = {
     f.apply(xnge)
   }
 

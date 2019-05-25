@@ -13,6 +13,7 @@ case class Scanner(location: Int) {
    */
   def scan() = {
     println(this + " will scan a random pallet!");
+    Thread.sleep(5 * 1000)
     val pallet = Pallet.random;
     new ScannerEvent(Instant.now, pallet.code)
   }
@@ -38,7 +39,7 @@ class Scan extends Step {
   /**
    * Sets Scanner.Event using Scanner
    */
-  override def apply(xnge: Exchange) = {
+  override def step(xnge: Exchange) = {
     val scanner = xnge.get(Scanner).asInstanceOf[Scanner]
     xnge.stash_put(ScannerEvent, scanner.scan())
   }
