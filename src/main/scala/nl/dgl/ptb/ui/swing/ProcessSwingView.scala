@@ -14,6 +14,8 @@ import nl.dgl.ptb.dsl.StepEvent
 import scala.collection.mutable.ListBuffer
 import scala.collection.mutable.HashMap
 import com.mxgraph.model.mxCell
+import nl.dgl.ptb.dsl.StepStarted
+import nl.dgl.ptb.dsl.StepFinished
 
 class ProcessSwingView(process: Process) extends Component {
 
@@ -57,8 +59,19 @@ class ProcessSwingView(process: Process) extends Component {
   }
 
   def notifyProcessStepChanged(stepEvent: StepEvent): Unit = {
-    step2view.get(stepEvent.step).foreach(view => {
-      graph.setCellStyle("fillColor=blue", Array(view))
+    stepEvent match {
+      case StepStarted(step, instant) => {
+        setStepViewStyle(step, "fillColor=yellow")
+      }
+      case StepFinished(step, instant) => {
+        setStepViewStyle(step, "fillColor=blue")
+      }
+    }
+  }
+
+  def setStepViewStyle(step: Step, style: String) {
+    step2view.get(step).foreach(view => {
+      graph.setCellStyle(style, Array(view))
     })
   }
 
