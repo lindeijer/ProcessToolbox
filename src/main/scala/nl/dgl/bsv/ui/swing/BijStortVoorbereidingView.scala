@@ -54,6 +54,7 @@ class BijStortVoorbereidingView(bsv: BijStortVoorbereiding) extends Frame {
     exchangeEvents += xngeEvent.toString
     exchangeView.listData = exchangeEvents
     exchangeView.ensureIndexIsVisible(exchangeEvents.size)
+    pack();
   }
 
 }
