@@ -83,7 +83,7 @@ case class StepSequential(val a: Step, val b: Step) extends Step {
 class StepChoice(steps: Vector[Step], chooser: String) extends Step {
 
   override def step(xnge: Exchange) = {
-    val chosenIndex = xnge.get(chooser).asInstanceOf[Int]
+    val chosenIndex = xnge.get[Int](chooser)
     val chosenStep = steps(chosenIndex)
     chosenStep.process(xnge)
   }
@@ -93,7 +93,7 @@ class StepChoice(steps: Vector[Step], chooser: String) extends Step {
 class StepSplit(in: String, out: String, step: Step) extends Step {
 
   override def step(xnge: Exchange) = {
-    val inputList = xnge.get(in).asInstanceOf[List[Any]]
+    val inputList = xnge.get[List[Any]](in)
     val outputMap = new HashMap[Any, Any]
     inputList.foreach(input => {
       xnge.put(in, input)
@@ -227,8 +227,11 @@ class Exchange {
 
   private val stash = new HashMap[Any, Any]
 
-  def stash_get(key: Any) = {
-    stash.get(key);
+  def stash_get[T](key: Any): T = {
+    if (key == null) {
+      throw new IllegalArgumentException("The stash-key may not be null.");
+    }
+    stash.get(key).asInstanceOf[T];
   }
 
   def stash_rename(oldKey: Any, newKey: Any) = {

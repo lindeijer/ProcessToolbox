@@ -120,7 +120,7 @@ class ScanPallet extends Scan {
    */
   override def step(xnge: Exchange) = {
     super.step(xnge)
-    val palletBarcode = xnge.stash_get(ScannerEvent).asInstanceOf[ScannerEvent].code
+    val palletBarcode = xnge.stash_get[ScannerEvent](ScannerEvent).code
     xnge.stash_put(ScanPallet, Pallet(palletBarcode).get)
   }
 }
@@ -136,9 +136,9 @@ object TransferItemCountBetweenPallets {}
 class TransferItemsBetweenPallets extends Step {
 
   override def step(xnge: Exchange) = {
-    val srcPallet = xnge.get(SrcPallet).asInstanceOf[Pallet]
-    val dstPallet = xnge.get(DstPallet).asInstanceOf[Pallet]
-    val transferItemCountBetweenPallets = xnge.get(TransferItemCountBetweenPallets).asInstanceOf[Int]
+    val srcPallet = xnge.get[Pallet](SrcPallet)
+    val dstPallet = xnge.get[Pallet](DstPallet)
+    val transferItemCountBetweenPallets = xnge.get[Int](TransferItemCountBetweenPallets)
     Pallet.transfer(srcPallet, dstPallet, transferItemCountBetweenPallets)
   }
 }
@@ -150,12 +150,12 @@ object TransferItemsBetweenPallets extends TransferItemsBetweenPallets {}
 object ScanAnyPalletWithArticle extends ScanPallet {
 
   override def step(xnge: Exchange) = {
-    val article = xnge.get(Article).asInstanceOf[Article]
+    val article = xnge.get[Article](Article);
     println("ScanPalletWithArticle: Looking for any Pallet with article=" + article)
     xnge.remove(ScanAnyPalletWithArticle)
     while (!xnge.containsKey(ScanAnyPalletWithArticle)) {
       super.step(xnge)
-      val pallet = xnge.stash_get(ScanPallet).asInstanceOf[Pallet]
+      val pallet = xnge.stash_get[Pallet](ScanPallet)
       if (pallet.article.equals(article)) {
         println("ScanPalletWithArticle: Found " + pallet + " with article=" + pallet.article)
         xnge.put(ScanAnyPalletWithArticle, pallet)
@@ -172,12 +172,12 @@ object ScanAnyPalletWithArticle extends ScanPallet {
 object ScanThePalletWithCode extends ScanPallet {
 
   override def step(xnge: Exchange) = {
-    val code = xnge.get(PalletCode).asInstanceOf[String]
+    val code = xnge.get[String](PalletCode)
     println("ScanThePalletWithCode: Looking for the Pallet with code=" + code)
     xnge.remove(ScanThePalletWithCode)
     while (!xnge.containsKey(ScanThePalletWithCode)) {
       super.step(xnge)
-      val pallet = xnge.stash_get(ScanPallet).asInstanceOf[Pallet]
+      val pallet = xnge.stash_get[Pallet](ScanPallet)
       if (pallet.code.equals(code)) {
         println("ScanThePalletWithCode: Found " + pallet)
         xnge.put(ScanThePalletWithCode, pallet)
