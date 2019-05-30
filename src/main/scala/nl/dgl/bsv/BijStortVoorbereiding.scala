@@ -25,11 +25,12 @@ import nl.dgl.logces.AnyPalletWithArticle
 import nl.dgl.logces.ThePalletWithCode
 import nl.dgl.logces.PalletScanner
 import nl.dgl.logces.SelectThePalletWithCode
+import nl.dgl.logces.PalletSelector
 
 class BijStortVoorbereiding {
 
   val process = Process {
-    SelectAnyPalletWithArticle(PalletScanner(0)) ~> //
+    SelectAnyPalletWithArticle ~> //
       Step(xnge => {
         val palletWithArticle = xnge.get[Pallet](AnyPalletWithArticle)
         val bijstortAmount = xnge.get[Double](BijstortAmount)
@@ -39,7 +40,7 @@ class BijStortVoorbereiding {
         xnge.put(TransferItemCountBetweenPallets, bijstortItemCount)
         xnge.put(BijstortScoopAmount, bijstortScoopAmount)
       }) ~> //
-      SelectThePalletWithCode(PalletScanner(0)) ~> //
+      SelectThePalletWithCode ~> //
       Step(xnge => {
         val srcPallet = xnge.get[Pallet](AnyPalletWithArticle)
         val dstPallet = xnge.get[Pallet](ThePalletWithCode)
@@ -77,7 +78,7 @@ object MES_4C_LIENT extends App {
 
   val xnge = new Exchange();
 
-  xnge.put(Scanner, Scanner(1))
+  xnge.put(PalletSelector, PalletScanner(0))
   xnge.put(PalletCode, "BijstortPallet1")
   xnge.put(Article, article_P1_10)
   xnge.put(BijstortAmount, 101.101)
