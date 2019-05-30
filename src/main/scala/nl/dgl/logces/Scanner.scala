@@ -32,23 +32,3 @@ object Scanner {
 
 case class ScannerEvent(instant: Instant, code: String) {}
 
-// ----
-
-class Scan extends Step {
-
-  /**
-   * Sets Scanner.Event using Scanner
-   */
-  override def step(xnge: Exchange) = {
-    val scanner = xnge.get[Scanner](Scanner)
-    xnge.stash_put(ScannerEvent, scanner.scan())
-  }
-}
-
-object Scan {
-
-  def apply() = {
-    new Scan()
-  }
-
-}
