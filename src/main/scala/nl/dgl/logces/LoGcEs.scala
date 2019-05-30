@@ -9,7 +9,7 @@ case class Product(code: String) {}
 
 object Product {
 
-  private val products = ListBuffer(new Product(""));
+  private val products: ListBuffer[Product] = ListBuffer.empty;
 
   def apply(code: String): Product = {
     products.find(_.code.equals(code)).getOrElse({
@@ -18,6 +18,8 @@ object Product {
       product
     })
   }
+
+  val unknown = new Product("???")
 
 }
 
@@ -30,7 +32,7 @@ case class Article(val code: String, val product: Product, val weight_kg: Double
 
 object Article {
 
-  private val articles = ListBuffer(new Article("", Product(""), 0.0));
+  private val articles: ListBuffer[Article] = ListBuffer.empty;
 
   def apply(code: String, product: Product, weight_kg: Double): Article = {
     articles.find(_.code.equals(code)).foreach(article => {
@@ -48,6 +50,8 @@ object Article {
       throw new IllegalArgumentException("Unknown Article code=" + code);
     })
   }
+
+  val unknown = new Article("", Product.unknown, 0.0)
 
 }
 
@@ -73,7 +77,7 @@ case class Pallet(val code: String, article: Article) {
 
 object Pallet {
 
-  private val pallets = ListBuffer(new Pallet("", Article("")));
+  private val pallets: ListBuffer[Pallet] = ListBuffer.empty;
 
   def apply(code: String, article: Article, itemCount: Int) = {
     pallets.find(_.code.equals(code)).foreach(pallet => {
@@ -87,8 +91,13 @@ object Pallet {
     pallet
   }
 
+  /**
+   * Gets the pallet with code, or creates an empty pallet with the code
+   */
   def apply(barcode: String) = {
-    pallets.find(_.code.equals(barcode));
+    pallets.find(_.code.equals(barcode)).getOrElse({
+      new Pallet(barcode, Article.unknown)
+    })
   }
 
   def destroy(pallet: Pallet) = {
@@ -101,6 +110,10 @@ object Pallet {
     dst.itemCount = dst.itemCount + transferCount
     println("Pallet.transfer: after src=" + src + ",dst=" + dst);
 
+  }
+
+  def isCode(code: String): Boolean = {
+    pallets.exists(_.code.equals(code))
   }
 
   val rndm = new Random
@@ -121,7 +134,7 @@ class ScanPallet extends Scan {
   override def step(xnge: Exchange) = {
     super.step(xnge)
     val palletBarcode = xnge.stash_get[ScannerEvent](ScannerEvent).code
-    xnge.stash_put(ScanPallet, Pallet(palletBarcode).get)
+    xnge.stash_put(ScanPallet, Pallet(palletBarcode))
   }
 }
 
@@ -147,23 +160,69 @@ object TransferItemsBetweenPallets extends TransferItemsBetweenPallets {}
 
 // ----
 
-object ScanAnyPalletWithArticle extends ScanPallet {
+trait Selector[T] {
+  def select(code: String): T
+}
+
+trait PalletSelector extends Selector[Pallet] {
+  def selectWithArticle(article: Article): Pallet
+}
+
+class PalletScanner(location: Int) extends PalletSelector {
+
+  val scanner = Scanner(location)
+
+  override def select(code: String): Pallet = {
+    println("PalletScanner: will scan a pallet with code=" + code)
+    selectWithCode(code, scanner.scan())
+  }
+
+  private def selectWithCode(code: String, scanEvent: ScannerEvent): Pallet = {
+    if (Pallet.isCode(scanEvent.code)) {
+      return Pallet(scanEvent.code)
+    } else {
+      println("PalletScanner: not a pallet code=" + scanEvent.code)
+      selectWithCode(code, scanner.scan())
+    }
+  }
+
+  def selectWithArticle(article: Article): Pallet = {
+    println("PalletScanner: will scan a pallet with article=" + article)
+    selectWithArticle(article, scanner.scan())
+  }
+
+  private def selectWithArticle(article: Article, scanEvent: ScannerEvent): Pallet = {
+    if (Pallet.isCode(scanEvent.code)) {
+      val pallet = Pallet(scanEvent.code)
+      if (pallet.article.equals(article)) {
+        return pallet
+      } else {
+        println("PalletScanner: not with article pallet=" + pallet)
+        selectWithArticle(article, scanner.scan())
+      }
+    } else {
+      println("PalletScanner: not a pallet code=" + scanEvent.code)
+      selectWithArticle(article, scanner.scan())
+    }
+  }
+}
+
+class SelectAnyPalletWithArticle(palletSelector: PalletSelector) extends Step {
 
   override def step(xnge: Exchange) = {
     val article = xnge.get[Article](Article);
-    println("ScanPalletWithArticle: Looking for any Pallet with article=" + article)
-    xnge.remove(ScanAnyPalletWithArticle)
-    while (!xnge.containsKey(ScanAnyPalletWithArticle)) {
-      super.step(xnge)
-      val pallet = xnge.stash_get[Pallet](ScanPallet)
-      if (pallet.article.equals(article)) {
-        println("ScanPalletWithArticle: Found " + pallet + " with article=" + pallet.article)
-        xnge.put(ScanAnyPalletWithArticle, pallet)
-      } else {
-        println("ScanPalletWithArticle: Wrong " + pallet + " with article=" + pallet.article)
-      }
-    }
+    println("SelectAnyPalletWithArticle: will select any pallet with article=" + article)
+    xnge.remove(AnyPalletWithArticle)
+    val pallet = palletSelector.selectWithArticle(article)
+    println("SelectAnyPalletWithArticle: selected any pallet with article, pallet=" + pallet)
+    xnge.put(AnyPalletWithArticle, pallet)
   }
+
+}
+
+object AnyPalletWithArticle {}
+
+object ScanAnyPalletWithArticle extends SelectAnyPalletWithArticle(new PalletScanner(0)) {
 
 }
 

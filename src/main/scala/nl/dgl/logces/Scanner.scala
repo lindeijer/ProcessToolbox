@@ -12,9 +12,9 @@ case class Scanner(location: Int) {
    * Note: the method blocks until the scan-event occurs.
    */
   def scan() = {
-    println(this + " will scan a random pallet!");
-    Thread.sleep(5 * 1000)
-    val pallet = Pallet.random;
+    println(this + " will scan a random barcode!");
+    Thread.sleep(1 * 1000)
+    val pallet = Pallet.random; // ok, only pallets for now
     new ScannerEvent(Instant.now, pallet.code)
   }
 

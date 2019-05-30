@@ -23,13 +23,14 @@ import nl.dgl.logces.TransferItemCountBetweenPallets
 import nl.dgl.logces.SrcPallet
 import nl.dgl.logces.DstPallet
 import nl.dgl.bsv.ui.swing.BijStortVoorbereidingView
+import nl.dgl.logces.AnyPalletWithArticle
 
 class BijStortVoorbereiding {
 
   val process = Process {
     ScanAnyPalletWithArticle ~> //
       Step(xnge => {
-        val palletWithArticle = xnge.get[Pallet](ScanAnyPalletWithArticle)
+        val palletWithArticle = xnge.get[Pallet](AnyPalletWithArticle)
         val bijstortAmount = xnge.get[Double](BijstortAmount)
         val itemAmount = palletWithArticle.article.weight_kg
         val bijstortItemCount = (bijstortAmount / itemAmount).toInt
@@ -39,7 +40,7 @@ class BijStortVoorbereiding {
       }) ~> //
       ScanThePalletWithCode ~> //
       Step(xnge => {
-        val srcPallet = xnge.get[Pallet](ScanAnyPalletWithArticle)
+        val srcPallet = xnge.get[Pallet](AnyPalletWithArticle)
         val dstPallet = xnge.get[Pallet](ScanThePalletWithCode)
         xnge.put(SrcPallet, srcPallet)
         xnge.put(DstPallet, dstPallet)
