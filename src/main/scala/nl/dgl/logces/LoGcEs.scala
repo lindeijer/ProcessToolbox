@@ -124,22 +124,6 @@ object Pallet {
   }
 }
 
-// ---------------
-
-class ScanPallet extends Scan {
-
-  /**
-   * Sets ScanPallet using Scanner.
-   */
-  override def step(xnge: Exchange) = {
-    super.step(xnge)
-    val palletBarcode = xnge.stash_get[ScannerEvent](ScannerEvent).code
-    xnge.stash_put(ScanPallet, Pallet(palletBarcode))
-  }
-}
-
-object ScanPallet {}
-
 ///////////////////////////////////////////////////
 
 object SrcPallet {}
@@ -228,23 +212,20 @@ object ScanAnyPalletWithArticle extends SelectAnyPalletWithArticle(new PalletSca
 
 // ----
 
-object ScanThePalletWithCode extends ScanPallet {
+class SelectThePalletWithCode(palletSelector: PalletSelector) extends Step {
 
   override def step(xnge: Exchange) = {
     val code = xnge.get[String](PalletCode)
-    println("ScanThePalletWithCode: Looking for the Pallet with code=" + code)
-    xnge.remove(ScanThePalletWithCode)
-    while (!xnge.containsKey(ScanThePalletWithCode)) {
-      super.step(xnge)
-      val pallet = xnge.stash_get[Pallet](ScanPallet)
-      if (pallet.code.equals(code)) {
-        println("ScanThePalletWithCode: Found " + pallet)
-        xnge.put(ScanThePalletWithCode, pallet)
-      } else {
-        println("ScanThePalletWithCode: Wrong " + pallet)
-      }
-    }
+    println("SelectThePalletWithCode: will select the pallet with code=" + code)
+    xnge.remove(ThePalletWithCode)
+    val pallet = palletSelector.select(code)
+    println("SelectThePalletWithCode: selected the pallet with code, pallet=" + pallet)
+    xnge.put(ThePalletWithCode, pallet)
   }
 }
+
+object ThePalletWithCode {}
+
+object ScanThePalletWithCode extends SelectThePalletWithCode(new PalletScanner(0)) {}
 
 object PalletCode {}

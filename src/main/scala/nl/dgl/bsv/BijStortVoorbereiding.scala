@@ -24,6 +24,7 @@ import nl.dgl.logces.SrcPallet
 import nl.dgl.logces.DstPallet
 import nl.dgl.bsv.ui.swing.BijStortVoorbereidingView
 import nl.dgl.logces.AnyPalletWithArticle
+import nl.dgl.logces.ThePalletWithCode
 
 class BijStortVoorbereiding {
 
@@ -41,7 +42,7 @@ class BijStortVoorbereiding {
       ScanThePalletWithCode ~> //
       Step(xnge => {
         val srcPallet = xnge.get[Pallet](AnyPalletWithArticle)
-        val dstPallet = xnge.get[Pallet](ScanThePalletWithCode)
+        val dstPallet = xnge.get[Pallet](ThePalletWithCode)
         xnge.put(SrcPallet, srcPallet)
         xnge.put(DstPallet, dstPallet)
       }) ~> //
