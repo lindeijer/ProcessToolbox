@@ -9,27 +9,27 @@ import scala.util.Random
 import nl.dgl.ptb.dsl.Exchange
 import nl.dgl.logces.Pallet
 import nl.dgl.logces.Article
-import nl.dgl.logces.ScanPallet
 import nl.dgl.ptb.dsl.Step
 import nl.dgl.ptb.dsl.Process
 import nl.dgl.logces.Scanner
 import nl.dgl.logces.Product
 import nl.dgl.ptb.ui.swing.ProcessSwingView
 import nl.dgl.logces.PalletCode
-import nl.dgl.logces.ScanThePalletWithCode
+import nl.dgl.logces.SelectAnyPalletWithArticle
 import nl.dgl.logces.TransferItemsBetweenPallets
-import nl.dgl.logces.ScanAnyPalletWithArticle
 import nl.dgl.logces.TransferItemCountBetweenPallets
 import nl.dgl.logces.SrcPallet
 import nl.dgl.logces.DstPallet
 import nl.dgl.bsv.ui.swing.BijStortVoorbereidingView
 import nl.dgl.logces.AnyPalletWithArticle
 import nl.dgl.logces.ThePalletWithCode
+import nl.dgl.logces.PalletScanner
+import nl.dgl.logces.SelectThePalletWithCode
 
 class BijStortVoorbereiding {
 
   val process = Process {
-    ScanAnyPalletWithArticle ~> //
+    SelectAnyPalletWithArticle(PalletScanner(0)) ~> //
       Step(xnge => {
         val palletWithArticle = xnge.get[Pallet](AnyPalletWithArticle)
         val bijstortAmount = xnge.get[Double](BijstortAmount)
@@ -39,7 +39,7 @@ class BijStortVoorbereiding {
         xnge.put(TransferItemCountBetweenPallets, bijstortItemCount)
         xnge.put(BijstortScoopAmount, bijstortScoopAmount)
       }) ~> //
-      ScanThePalletWithCode ~> //
+      SelectThePalletWithCode(PalletScanner(0)) ~> //
       Step(xnge => {
         val srcPallet = xnge.get[Pallet](AnyPalletWithArticle)
         val dstPallet = xnge.get[Pallet](ThePalletWithCode)

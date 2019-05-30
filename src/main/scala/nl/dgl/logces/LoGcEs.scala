@@ -31,6 +31,17 @@ trait PalletSelector extends Selector[Pallet] {
   def selectWithArticle(article: Article): Pallet
 }
 
+object PalletSelector extends PalletSelector {
+  def select(code: String): Pallet = {
+    Pallet(code)
+  }
+  def selectWithArticle(article: Article): Pallet = {
+    Pallet(article)
+  }
+}
+
+// ----
+
 class PalletScanner(location: Int) extends PalletSelector {
 
   val scanner = Scanner(location)
@@ -70,6 +81,14 @@ class PalletScanner(location: Int) extends PalletSelector {
   }
 }
 
+object PalletScanner {
+
+  def apply(location: Int) = {
+    new PalletScanner(location)
+  }
+}
+// ----
+
 class SelectAnyPalletWithArticle(palletSelector: PalletSelector) extends Step {
 
   override def step(xnge: Exchange) = {
@@ -83,11 +102,15 @@ class SelectAnyPalletWithArticle(palletSelector: PalletSelector) extends Step {
 
 }
 
-object AnyPalletWithArticle {}
+object SelectAnyPalletWithArticle {
 
-object ScanAnyPalletWithArticle extends SelectAnyPalletWithArticle(new PalletScanner(0)) {
+  def apply(palletSelector: PalletSelector) = {
+    new SelectAnyPalletWithArticle(palletSelector);
+  }
 
 }
+
+object AnyPalletWithArticle {}
 
 // ----
 
@@ -103,8 +126,12 @@ class SelectThePalletWithCode(palletSelector: PalletSelector) extends Step {
   }
 }
 
+object SelectThePalletWithCode {
+
+  def apply(palletSelector: PalletSelector) = {
+    new SelectThePalletWithCode(palletSelector)
+  }
+}
+
 object ThePalletWithCode {}
-
-object ScanThePalletWithCode extends SelectThePalletWithCode(new PalletScanner(0)) {}
-
 object PalletCode {}

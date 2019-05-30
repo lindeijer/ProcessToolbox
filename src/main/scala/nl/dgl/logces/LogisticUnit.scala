@@ -2,6 +2,7 @@ package nl.dgl.logces
 
 import scala.collection.mutable.ListBuffer
 import scala.util.Random
+import java.util.UUID
 
 /**
  * Contains a number of indistinguishable articles.
@@ -33,11 +34,20 @@ object Pallet {
   }
 
   /**
-   * Gets the pallet with code, or creates an empty pallet with the code
+   * Gets the existing pallet with code, or creates an empty pallet with the code
    */
   def apply(barcode: String) = {
     pallets.find(_.code.equals(barcode)).getOrElse({
       new Pallet(barcode, Article.unknown)
+    })
+  }
+
+  /**
+   * Gets any existing pallet with article, or creates an empty pallet for the article
+   */
+  def apply(article: Article): Pallet = {
+    pallets.find(_.article.equals(article)).getOrElse({
+      new Pallet("pallet:" + UUID.randomUUID, article)
     })
   }
 
