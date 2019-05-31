@@ -7,15 +7,16 @@ import nl.dgl.ptb.dsl.Step
 
 object SrcPallet {}
 object DstPallet {}
-object TransferItemCountBetweenPallets {}
 
 class TransferItemsBetweenPallets extends (Exchange => Unit) {
+
+  object Count {}
 
   def apply(xnge: Exchange) = {
     val srcPallet = xnge.get[Pallet](SrcPallet)
     val dstPallet = xnge.get[Pallet](DstPallet)
-    val transferItemCountBetweenPallets = xnge.get[Int](TransferItemCountBetweenPallets)
-    Pallet.transfer(srcPallet, dstPallet, transferItemCountBetweenPallets)
+    val transferItemsBetweenPalletsCount = xnge.get[Int](TransferItemsBetweenPallets.Count)
+    Pallet.transfer(srcPallet, dstPallet, transferItemsBetweenPalletsCount)
   }
 }
 
@@ -116,3 +117,25 @@ object SelectThePalletWithCode extends SelectThePalletWithCode {}
 
 object ThePalletWithCode {}
 object PalletCode {}
+
+////////////////////////////////////////////////
+
+class TransferProductBetweenVessels extends (Exchange => Unit) {
+
+  object Amount {}
+
+  def apply(xnge: Exchange) = {
+    val srcVessel = xnge.get[Vessel](SrcVessel)
+    val dstVessel = xnge.get[Vessel](DstVessel)
+    val transferAmount = xnge.get[Double](TransferProductBetweenVessels.Amount)
+    println("TransferProductBetweenVessels: before; srcVessel.amount=" + srcVessel.amount + ",dstVessel.amount=" + dstVessel.amount)
+    Vessel.transfer(srcVessel, dstVessel, transferAmount)
+    println("TransferProductBetweenVessels: after; srcVessel.amount=" + srcVessel.amount + ",dstVessel.amount=" + dstVessel.amount)
+  }
+}
+
+object TransferProductBetweenVessels extends TransferProductBetweenVessels {}
+
+object SrcVessel {}
+object DstVessel {}
+

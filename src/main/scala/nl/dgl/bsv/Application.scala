@@ -8,7 +8,11 @@ import nl.dgl.ptb.dsl.Exchange
 import nl.dgl.logces.PalletSelector
 import nl.dgl.logces.PalletScanner
 import nl.dgl.logces.PalletCode
-import nl.dgl.logces.TransferItemCountBetweenPallets
+import nl.dgl.logces.TransferItemsBetweenPallets
+import nl.dgl.logces.TransferProductBetweenVessels
+import nl.dgl.logces.Vessel
+import nl.dgl.logces.SrcVessel
+import nl.dgl.logces.DstVessel
 
 object MES_4C_LIENT extends App {
 
@@ -36,7 +40,10 @@ object MES_4C_LIENT extends App {
 
   bsv.process.process(xnge)
 
-  println("TransferItemCountBetweenPallets=" + xnge.get(TransferItemCountBetweenPallets))
-  println("BijstortScoopAmount=" + xnge.get(BijstortScoopAmount))
+  println("TransferItemCountBetweenPallets=" + xnge.get(TransferItemsBetweenPallets.Count))
+  println("BijstortScoopAmount=" + xnge.get(TransferProductBetweenVessels.Amount))
+
+  println("SrcVessel=" + xnge.get[Vessel](SrcVessel))
+  println("DstVessel=" + xnge.get[Vessel](DstVessel))
 
 }

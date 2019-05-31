@@ -20,6 +20,12 @@ object Product {
 
 }
 
+// ----
+
+case class Lot(id: String, product: Product, amount: Double) {}
+
+// ----
+
 /**
  * An Article is a 'packaged' commodity with a fixed weight (which can be handled and sold).
  *
@@ -51,6 +57,8 @@ object Article {
   val unknown = new Article("", Product.unknown, 0.0)
 
 }
+
+// ----
 
 /**
  * An instance of an Article and an actual amount of a commodity which can he handled.
