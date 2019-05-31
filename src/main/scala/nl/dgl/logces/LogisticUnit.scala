@@ -5,7 +5,7 @@ import scala.util.Random
 import java.util.UUID
 
 /**
- * Contains a number of indistinguishable articles.
+ * Contains a number of indistinguishable items of the same article.
  */
 case class Pallet(val code: String, article: Article) {
 
