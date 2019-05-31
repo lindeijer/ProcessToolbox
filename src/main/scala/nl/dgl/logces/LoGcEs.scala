@@ -9,9 +9,9 @@ object SrcPallet {}
 object DstPallet {}
 object TransferItemCountBetweenPallets {}
 
-class TransferItemsBetweenPallets extends Step {
+class TransferItemsBetweenPallets extends (Exchange => Unit) {
 
-  override def step(xnge: Exchange) = {
+  def apply(xnge: Exchange) = {
     val srcPallet = xnge.get[Pallet](SrcPallet)
     val dstPallet = xnge.get[Pallet](DstPallet)
     val transferItemCountBetweenPallets = xnge.get[Int](TransferItemCountBetweenPallets)
@@ -79,9 +79,9 @@ object PalletScanner {
 }
 // ----
 
-class SelectAnyPalletWithArticle extends Step {
+class SelectAnyPalletWithArticle extends (Exchange => Unit) {
 
-  override def step(xnge: Exchange) = {
+  def apply(xnge: Exchange) = {
     val article = xnge.get[Article](Article);
     val palletSelector = xnge.get[PalletSelector](PalletSelector);
     println("SelectAnyPalletWithArticle: will select any pallet with article=" + article + " using selector=" + palletSelector)
@@ -93,21 +93,15 @@ class SelectAnyPalletWithArticle extends Step {
 
 }
 
-object SelectAnyPalletWithArticle extends SelectAnyPalletWithArticle {
-
-  def apply() = {
-    new SelectAnyPalletWithArticle();
-  }
-
-}
+object SelectAnyPalletWithArticle extends SelectAnyPalletWithArticle {}
 
 object AnyPalletWithArticle {}
 
 // ----
 
-class SelectThePalletWithCode extends Step {
+class SelectThePalletWithCode extends (Exchange => Unit) {
 
-  override def step(xnge: Exchange) = {
+  def apply(xnge: Exchange) = {
     val code = xnge.get[String](PalletCode)
     val palletSelector = xnge.get[PalletSelector](PalletSelector);
     println("SelectThePalletWithCode: will select the pallet with code=" + code + " using selector=" + palletSelector)
@@ -118,12 +112,7 @@ class SelectThePalletWithCode extends Step {
   }
 }
 
-object SelectThePalletWithCode extends SelectThePalletWithCode {
-
-  def apply() = {
-    new SelectThePalletWithCode()
-  }
-}
+object SelectThePalletWithCode extends SelectThePalletWithCode {}
 
 object ThePalletWithCode {}
 object PalletCode {}

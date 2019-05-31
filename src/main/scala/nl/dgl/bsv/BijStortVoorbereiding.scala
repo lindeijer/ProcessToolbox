@@ -30,7 +30,7 @@ import nl.dgl.logces.PalletSelector
 class BijStortVoorbereiding {
 
   val process = Process {
-    SelectAnyPalletWithArticle ~> //
+    Step(SelectAnyPalletWithArticle) ~> //
       Step(xnge => {
         val palletWithArticle = xnge.get[Pallet](AnyPalletWithArticle)
         val bijstortAmount = xnge.get[Double](BijstortAmount)
@@ -40,14 +40,14 @@ class BijStortVoorbereiding {
         xnge.put(TransferItemCountBetweenPallets, bijstortItemCount)
         xnge.put(BijstortScoopAmount, bijstortScoopAmount)
       }) ~> //
-      SelectThePalletWithCode ~> //
+      Step(SelectThePalletWithCode) ~> //
       Step(xnge => {
         val srcPallet = xnge.get[Pallet](AnyPalletWithArticle)
         val dstPallet = xnge.get[Pallet](ThePalletWithCode)
         xnge.put(SrcPallet, srcPallet)
         xnge.put(DstPallet, dstPallet)
       }) ~> //
-      TransferItemsBetweenPallets
+      Step(TransferItemsBetweenPallets)
   }
 
 }
