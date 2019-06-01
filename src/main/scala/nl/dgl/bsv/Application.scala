@@ -41,7 +41,7 @@ object MES_4C_LIENT extends App {
   bsv.process.process(xnge)
 
   println("TransferItemCountBetweenPallets=" + xnge.get(TransferItemsBetweenPallets.Count))
-  println("BijstortScoopAmount=" + xnge.get(TransferProductBetweenVessels.Amount))
+  println("BijstortScoopAmount=" + xnge.get(TransferProductBetweenVessels.AmountActual))
 
   println("SrcVessel=" + xnge.get[Vessel](SrcVessel))
   println("DstVessel=" + xnge.get[Vessel](DstVessel))

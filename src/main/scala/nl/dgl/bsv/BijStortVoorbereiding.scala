@@ -30,6 +30,8 @@ import nl.dgl.logces.SrcVessel
 import nl.dgl.logces.DstVessel
 import nl.dgl.logces.Lot
 import nl.dgl.logces.Vessel
+import nl.dgl.logces.Scale
+import nl.dgl.logces.TransferProductBetweenVessels.AmountMarginPercent
 
 class BijStortVoorbereiding {
 
@@ -42,7 +44,7 @@ class BijStortVoorbereiding {
         val bijstortItemCount = (bijstortAmount / itemAmount).toInt
         val bijstortScoopAmount = bijstortAmount - (bijstortItemCount * palletWithArticle.article.weight_kg)
         xnge.put(TransferItemsBetweenPallets.Count, bijstortItemCount)
-        xnge.put(TransferProductBetweenVessels.Amount, bijstortScoopAmount)
+        xnge.put(TransferProductBetweenVessels.AmountTarget, bijstortScoopAmount)
       }) ~> //
       Step(SelectThePalletWithCode) ~> //
       Step(xnge => {
@@ -58,6 +60,8 @@ class BijStortVoorbereiding {
         val dstVessel = Vessel("vessel1", article.product)
         xnge.put(SrcVessel, srcVessel)
         xnge.put(DstVessel, dstVessel)
+        xnge.put(Scale, Scale(0))
+        xnge.put(AmountMarginPercent, 10.0)
       }) ~> //
       Step(TransferProductBetweenVessels)
   }

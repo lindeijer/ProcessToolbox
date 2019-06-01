@@ -122,14 +122,23 @@ object PalletCode {}
 
 class TransferProductBetweenVessels extends (Exchange => Unit) {
 
-  object Amount {}
+  object AmountTarget {}
+  object AmountActual {}
+  object AmountMarginPercent {}
 
   def apply(xnge: Exchange) = {
     val srcVessel = xnge.get[Vessel](SrcVessel)
     val dstVessel = xnge.get[Vessel](DstVessel)
-    val transferAmount = xnge.get[Double](TransferProductBetweenVessels.Amount)
+    val transferAmountTarget = xnge.get[Double](TransferProductBetweenVessels.AmountTarget)
+    val scale = xnge.get[Scale](Scale)
+    val marginPercent = xnge.get[Double](AmountMarginPercent)
+    //
+    val weighedAmount = scale.weigh(transferAmountTarget, marginPercent).amount
+    println("TransferProductBetweenVessels: transferAmountTarget=" + transferAmountTarget + ",marginPercent=" + marginPercent + ",weighedAmount=" + weighedAmount)
+    xnge.put(TransferProductBetweenVessels.AmountActual, weighedAmount)
+    //
     println("TransferProductBetweenVessels: before; srcVessel.amount=" + srcVessel.amount + ",dstVessel.amount=" + dstVessel.amount)
-    Vessel.transfer(srcVessel, dstVessel, transferAmount)
+    Vessel.transfer(srcVessel, dstVessel, weighedAmount)
     println("TransferProductBetweenVessels: after; srcVessel.amount=" + srcVessel.amount + ",dstVessel.amount=" + dstVessel.amount)
   }
 }
