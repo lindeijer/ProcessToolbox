@@ -1,8 +1,8 @@
 package nl.dgl.ptb.dsl
 
-import java.util.HashMap
 import scala.collection.mutable.ListBuffer
 import java.time.Instant
+import scala.collection.mutable.HashMap
 
 class Process(val top: Step) extends Step {
 
@@ -85,21 +85,32 @@ class StepChoice(steps: Vector[Step], chooser: String) extends Step {
 
 }
 
-class StepSplit(in: String, out: String, step: Step) extends Step {
+class StepSplit(splitListKey: Any, splitItemKey: Any, splitItemResultKey: Any, splitResultsKey: Any, step: Step) extends Step {
 
   override def step(xnge: Exchange) = {
-    val inputList = xnge.get[List[Any]](in)
-    val outputMap = new HashMap[Any, Any]
-    inputList.foreach(input => {
-      xnge.put(in, input)
+    val splitList = xnge.get[List[Any]](splitListKey)
+    println("StepSplit: " + splitList + "=" + splitList);
+    val splitResults = new HashMap[Any, Any]
+    splitList.foreach(splitItem => {
+      xnge.put(splitItemKey, splitItem)
       step.process(xnge);
-      val output = xnge.get(out)
-      outputMap.put(input, output)
+      val splitItemResult = xnge.get[Any](splitItemResultKey)
+      splitResults.put(splitItem, splitItemResult)
     })
-    xnge.put(out, outputMap)
+    xnge.put(splitResultsKey, splitResults.toMap)
   }
 
 }
+
+object Split {
+
+  def apply(splitListKey: Any, splitItemKey: Any, splitItemResultKey: Any, splitResultsKey: Any, step: Step): StepSplit = {
+    return new StepSplit(splitListKey, splitItemKey, splitItemResultKey, splitResultsKey, step)
+  }
+
+}
+
+// ----
 
 trait StepEvent {
   val step: Step
@@ -165,7 +176,7 @@ class Exchange {
     if (key == null) {
       throw new IllegalArgumentException("The key may not be null.");
     }
-    properties.get(key).asInstanceOf[T];
+    properties.get(key).getOrElse(null).asInstanceOf[T];
   }
 
   def rename(oldKey: Any, newKey: Any) = {
@@ -203,7 +214,7 @@ class Exchange {
     if (key == null) {
       throw new IllegalArgumentException("The key may not be null.");
     }
-    if (properties.containsKey(key)) {
+    if (properties.contains(key)) {
       listeners.foreach(_.apply(ExchangeRemove(key)))
       properties.remove(key);
     }
@@ -213,7 +224,7 @@ class Exchange {
     if (key == null) {
       throw new IllegalArgumentException("The key may not be null.");
     }
-    properties.containsKey(key);
+    properties.contains(key);
   }
 
   val listeners: ListBuffer[ExchangeEvent => Unit] = ListBuffer.empty
@@ -243,7 +254,7 @@ class Exchange {
   }
 
   def stash_containsKey(key: Any) = {
-    stash.containsKey(key);
+    stash.contains(key);
   }
 
 }

@@ -34,32 +34,38 @@ import nl.dgl.logces.TransferProductBetweenVessels.AmountMarginPercent
 import nl.dgl.logces.Vessels
 import nl.dgl.logces.SelectThePalletWithId
 import nl.dgl.logces.ThePalletWithId
+import nl.dgl.ptb.dsl.Split
 
 class BijStortVoorbereiding {
 
   val bsvIngredientPalletZakken = Process { //
-    Step(SelectAnyPalletWithProduct) ~> //
+    Step(xnge => {
+      val product = xnge.get[Bijstort](Bijstort).product
+      xnge.put(Product, product)
+    }) ~> //
+      Step(SelectAnyPalletWithProduct) ~> //
       Step(xnge => {
-        val palletWithArticle = xnge.get[Pallet](AnyPalletWithProduct)
-        val bijstortAmount = xnge.get[Double](BijstortAmount)
-        val itemAmount = palletWithArticle.article.weight_kg
+        val palletWithProduct = xnge.get[Pallet](AnyPalletWithProduct)
+        val bijstortAmount = xnge.get[Bijstort](Bijstort).amount
+        val itemAmount = palletWithProduct.article.weight_kg
         val bijstortItemCount = (bijstortAmount / itemAmount).toInt
         xnge.put(TransferItemsBetweenPallets.Count, bijstortItemCount)
-      }) ~> //
-      Step(SelectThePalletWithId) ~> //
-      Step(xnge => {
+        //
+        val bijstortPalletId = "pallet:" + UUID.randomUUID()
+        val bijstortPallet = Pallet(bijstortPalletId);
+        //
         val srcPallet = xnge.get[Pallet](AnyPalletWithProduct)
-        val dstPallet = xnge.get[Pallet](ThePalletWithId)
+        val dstPallet = bijstortPallet
         xnge.put(SrcPallet, srcPallet)
         xnge.put(DstPallet, dstPallet)
       }) ~>
       Step(TransferItemsBetweenPallets)
   }
 
-  val bsvIngredientSchepzakken = Process { //
+  val bsvIngredientSchepZakken = Process { //
     Step(xnge => {
       val product = xnge.get[Product](Product)
-      val bijstortAmount = xnge.get[Double](BijstortAmount)
+      val bijstortAmount = xnge.get[Bijstort](Bijstort).amount
       val bijstortPallet = xnge.get[Pallet](DstPallet)
       val bijstortScoopAmount = bijstortAmount - (bijstortPallet.totalArticleWeight_kg)
       //
@@ -72,15 +78,24 @@ class BijStortVoorbereiding {
       xnge.put(Scale, Scale(0))
       xnge.put(AmountMarginPercent, 10.0)
       xnge.put(TransferProductBetweenVessels.AmountTarget, bijstortScoopAmount)
+      xnge.put(BijstortResultaat, (bijstortPallet.totalArticleWeight_kg, bijstortScoopAmount))
     }) ~> //
       Step(TransferProductBetweenVessels)
   }
 
+  val bsvIngredient = Process { //
+    bsvIngredientPalletZakken ~> //
+      bsvIngredientSchepZakken
+  }
+
   val process = Process { //
-    bsvIngredientPalletZakken ~> bsvIngredientSchepzakken
+    Split(BijstortLijst, Bijstort, BijstortResultaat, BijstortResultaten, bsvIngredient)
   }
 
 }
 
-object BijstortAmount {}
+case class Bijstort(product: Product, amount: Double) {}
 
+object BijstortLijst {}
+object BijstortResultaat {}
+object BijstortResultaten {}
