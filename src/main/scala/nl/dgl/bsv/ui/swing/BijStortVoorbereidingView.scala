@@ -10,16 +10,14 @@ import scala.swing.Label
 import scala.swing.ListView
 import scala.collection.mutable.ListBuffer
 import nl.dgl.ptb.dsl.ExchangeEvent
-import nl.dgl.ptb.dsl.ProcessEvent
-import nl.dgl.ptb.dsl.ProcessExchangeChanged
-import nl.dgl.ptb.dsl.ProcessStepChanged
 import nl.dgl.ptb.dsl.StepEvent
 
 class BijStortVoorbereidingView(bsv: BijStortVoorbereiding) extends Frame {
 
   val processView = new ProcessSwingView(bsv.process)
 
-  bsv.process.listeners += notifyProcessChanged
+  bsv.process.listeners += processView.notifyStepChanged
+  bsv.process.xngeListeners += notifyExchangeChanged
 
   title = "BijStortVoorbereiding"
   val exchangeEvents: ListBuffer[String] = ListBuffer.empty
@@ -39,18 +37,7 @@ class BijStortVoorbereidingView(bsv: BijStortVoorbereiding) extends Frame {
 
   ///////////////////////////
 
-  def notifyProcessChanged(processEvent: ProcessEvent) = {
-    processEvent match {
-      case ProcessExchangeChanged(process, xngeEvent) => notifyProcessExchangeChanged(xngeEvent)
-      case ProcessStepChanged(process, stepEvent) => processView.notifyProcessStepChanged(stepEvent)
-      case _ => println("dropped processEvent=" + processEvent)
-    }
-
-  }
-
-  //////////////////////////////
-
-  def notifyProcessExchangeChanged(xngeEvent: ExchangeEvent): Unit = {
+  def notifyExchangeChanged(xngeEvent: ExchangeEvent): Unit = {
     exchangeEvents += xngeEvent.toString
     exchangeView.listData = exchangeEvents
     exchangeView.ensureIndexIsVisible(exchangeEvents.size)

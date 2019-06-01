@@ -36,7 +36,7 @@ import nl.dgl.logces.Vessels
 
 class BijStortVoorbereiding {
 
-  val process = Process {
+  val bsvIngredientPalletZakken = Process { //
     Step(SelectAnyPalletWithArticle) ~> //
       Step(xnge => {
         val palletWithArticle = xnge.get[Pallet](AnyPalletWithArticle)
@@ -51,25 +51,32 @@ class BijStortVoorbereiding {
         val dstPallet = xnge.get[Pallet](ThePalletWithCode)
         xnge.put(SrcPallet, srcPallet)
         xnge.put(DstPallet, dstPallet)
-      }) ~> //
-      Step(TransferItemsBetweenPallets) ~>
-      Step(xnge => {
-        val article = xnge.get[Article](Article)
-        val bijstortAmount = xnge.get[Double](BijstortAmount)
-        val bijstortPallet = xnge.get[Pallet](DstPallet)
-        val bijstortScoopAmount = bijstortAmount - (bijstortPallet.totalArticleWeight_kg)
-        //
-        val vitamineBak = Vessel("vitamineBak1", Lot("lot1", article.product, 10 * 1000)) // wordt door operator gepakt
-        val schepZak = Vessel("schepzak1", article.product) // print ook label ...
-        println("Weeg " + bijstortScoopAmount + " kg van " + article.product + " af uit " + vitamineBak + " en schep in " + schepZak)
-        //
-        xnge.put(SrcVessel, vitamineBak)
-        xnge.put(DstVessel, schepZak)
-        xnge.put(Scale, Scale(0))
-        xnge.put(AmountMarginPercent, 10.0)
-        xnge.put(TransferProductBetweenVessels.AmountTarget, bijstortScoopAmount)
-      }) ~> //
+      }) ~>
+      Step(TransferItemsBetweenPallets)
+  }
+
+  val bsvIngredientSchepzakken = Process { //
+    Step(xnge => {
+      val article = xnge.get[Article](Article)
+      val bijstortAmount = xnge.get[Double](BijstortAmount)
+      val bijstortPallet = xnge.get[Pallet](DstPallet)
+      val bijstortScoopAmount = bijstortAmount - (bijstortPallet.totalArticleWeight_kg)
+      //
+      val vitamineBak = Vessel("vitamineBak1", Lot("lot1", article.product, 10 * 1000)) // wordt door operator gepakt
+      val schepZak = Vessel("schepzak1", article.product) // print ook label ...
+      println("Weeg " + bijstortScoopAmount + " kg van " + article.product + " af uit " + vitamineBak + " en schep in " + schepZak)
+      //
+      xnge.put(SrcVessel, vitamineBak)
+      xnge.put(DstVessel, schepZak)
+      xnge.put(Scale, Scale(0))
+      xnge.put(AmountMarginPercent, 10.0)
+      xnge.put(TransferProductBetweenVessels.AmountTarget, bijstortScoopAmount)
+    }) ~> //
       Step(TransferProductBetweenVessels)
+  }
+
+  val process = Process { //
+    bsvIngredientPalletZakken ~> bsvIngredientSchepzakken
   }
 
 }

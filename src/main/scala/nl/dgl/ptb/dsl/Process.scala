@@ -4,31 +4,26 @@ import java.util.HashMap
 import scala.collection.mutable.ListBuffer
 import java.time.Instant
 
-class ProcessEvent {}
-case class ProcessExchangeChanged(process: Process, xngeEvent: ExchangeEvent) extends ProcessEvent {}
-case class ProcessStepChanged(process: Process, xngeEvent: StepEvent) extends ProcessEvent {}
+class Process(val top: Step) extends Step {
 
-class Process(val top: Step) {
+  override def step(xnge: Exchange) = {}
 
-  def process(xnge: Exchange) = {
-    xnge.listeners += notifyExchangeChanged
-    top.listeners += notifyStepChanged
+  override def process(xnge: Exchange) = {
+    xnge.listeners ++= xngeListeners
+    listeners.foreach(_.apply(new StepStarted(this, Instant.now)))
+    top.listeners += notifySubStepChanged
     top.process(xnge)
-    top.listeners -= notifyStepChanged
-    xnge.listeners -= notifyExchangeChanged
+    top.listeners -= notifySubStepChanged
+    listeners.foreach(_.apply(new StepFinished(this, Instant.now)))
+    xnge.listeners --= xngeListeners
   }
 
-  ////////////////////////
-
-  def notifyExchangeChanged(xngeEvent: ExchangeEvent) = {
-    listeners.foreach(_.apply(ProcessExchangeChanged(this, xngeEvent)))
+  def notifySubStepChanged(stepEvent: StepEvent) = {
+    listeners.foreach(_.apply(stepEvent))
   }
 
-  def notifyStepChanged(stepEvent: StepEvent) = {
-    listeners.foreach(_.apply(ProcessStepChanged(this, stepEvent)))
-  }
+  val xngeListeners: ListBuffer[ExchangeEvent => Unit] = ListBuffer.empty
 
-  val listeners: ListBuffer[ProcessEvent => Unit] = ListBuffer.empty
 }
 
 object Process {
@@ -141,7 +136,7 @@ abstract class Step {
 
 }
 
-class StepFunction(f: Exchange => Any) extends Step {
+class StepFunction(val f: Exchange => Any) extends Step {
 
   override def step(xnge: Exchange) = {
     f.apply(xnge)
