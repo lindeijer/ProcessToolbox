@@ -54,7 +54,7 @@ object Article {
     })
   }
 
-  val unknown = new Article("", Product.unknown, 0.0)
+  val unknown = new Article("???", Product.unknown, 0.0)
 
 }
 

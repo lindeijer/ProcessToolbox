@@ -32,6 +32,7 @@ import nl.dgl.logces.Lot
 import nl.dgl.logces.Vessel
 import nl.dgl.logces.Scale
 import nl.dgl.logces.TransferProductBetweenVessels.AmountMarginPercent
+import nl.dgl.logces.Vessels
 
 class BijStortVoorbereiding {
 
@@ -42,9 +43,7 @@ class BijStortVoorbereiding {
         val bijstortAmount = xnge.get[Double](BijstortAmount)
         val itemAmount = palletWithArticle.article.weight_kg
         val bijstortItemCount = (bijstortAmount / itemAmount).toInt
-        val bijstortScoopAmount = bijstortAmount - (bijstortItemCount * palletWithArticle.article.weight_kg)
         xnge.put(TransferItemsBetweenPallets.Count, bijstortItemCount)
-        xnge.put(TransferProductBetweenVessels.AmountTarget, bijstortScoopAmount)
       }) ~> //
       Step(SelectThePalletWithCode) ~> //
       Step(xnge => {
@@ -56,12 +55,19 @@ class BijStortVoorbereiding {
       Step(TransferItemsBetweenPallets) ~>
       Step(xnge => {
         val article = xnge.get[Article](Article)
-        val srcVessel = Vessel("vessel1", Lot("lot1", article.product, 10 * 1000))
-        val dstVessel = Vessel("vessel1", article.product)
-        xnge.put(SrcVessel, srcVessel)
-        xnge.put(DstVessel, dstVessel)
+        val bijstortAmount = xnge.get[Double](BijstortAmount)
+        val bijstortPallet = xnge.get[Pallet](DstPallet)
+        val bijstortScoopAmount = bijstortAmount - (bijstortPallet.totalArticleWeight_kg)
+        //
+        val vitamineBak = Vessel("vitamineBak1", Lot("lot1", article.product, 10 * 1000)) // wordt door operator gepakt
+        val schepZak = Vessel("schepzak1", article.product) // print ook label ...
+        println("Weeg " + bijstortScoopAmount + " kg van " + article.product + " af uit " + vitamineBak + " en schep in " + schepZak)
+        //
+        xnge.put(SrcVessel, vitamineBak)
+        xnge.put(DstVessel, schepZak)
         xnge.put(Scale, Scale(0))
         xnge.put(AmountMarginPercent, 10.0)
+        xnge.put(TransferProductBetweenVessels.AmountTarget, bijstortScoopAmount)
       }) ~> //
       Step(TransferProductBetweenVessels)
   }

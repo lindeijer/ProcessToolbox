@@ -7,14 +7,12 @@ import scala.collection.mutable.HashMap
 import scala.collection.mutable.ListMap
 import scala.collection.mutable.Map
 
-class LogisticUnit(val id: String) {
-
-}
+class LogisticUnit(val id: String) {}
 
 /**
  * Contains a number of indistinguishable items of the same article.
  */
-case class Pallet(override val id: String, article: Article) extends LogisticUnit(id) {
+case class Pallet(override val id: String, var article: Article) extends LogisticUnit(id) {
 
   var itemCount: Int = 0;
 
@@ -45,7 +43,9 @@ object Pallet {
    */
   def apply(id: String) = {
     pallets.find(_.id.equals(id)).getOrElse({
-      new Pallet(id, Article.unknown)
+      val pallet = new Pallet(id, Article.unknown)
+      pallets += pallet
+      pallet
     })
   }
 
@@ -64,10 +64,15 @@ object Pallet {
 
   def transfer(src: Pallet, dst: Pallet, transferCount: Int) {
     println("Pallet.transfer: before src=" + src + ",dst=" + dst + ",transferCount=" + transferCount);
+    println("Pallet.transfer: before src.totalArticleWeight_kg=" + src.totalArticleWeight_kg() + ",dst.totalArticleWeight_kg=" + dst.totalArticleWeight_kg());
+    if (dst.article.equals(Article.unknown) && dst.itemCount == 0) {
+      dst.article = src.article
+    } else {
+      throw new IllegalArgumentException("Destination Pallet has wrong article, found " + dst.article + " but expected " + src.article);
+    }
     src.itemCount = src.itemCount - transferCount
     dst.itemCount = dst.itemCount + transferCount
-    println("Pallet.transfer: after src=" + src + ",dst=" + dst);
-
+    println("Pallet.transfer: after src.totalArticleWeight_kg=" + src.totalArticleWeight_kg + ",dst.totalArticleWeight_kg=" + dst.totalArticleWeight_kg);
   }
 
   def isCode(id: String): Boolean = {
@@ -112,12 +117,26 @@ object Vessel {
     dstVessel.add(srcVessel.subtract(amount))
   }
 
-  def apply(id: String, lot: Lot) = {
-    new VesselPure(id, lot)
+  def apply(id: String, lot: Lot): VesselPure = {
+    val v = new VesselPure(id, lot)
+    Vessels.vessels += v
+    return v
   }
 
-  def apply(id: String, product: Product) = {
-    new VesselMixed(id, product)
+  def apply(id: String, product: Product): VesselMixed = {
+    val v = new VesselMixed(id, product)
+    Vessels.vessels += v
+    return v
+  }
+
+}
+
+object Vessels {
+
+  val vessels: ListBuffer[Vessel] = ListBuffer.empty
+
+  def getAll(product: Product): List[Vessel] = {
+    vessels.filter(v => v.product.equals(product)).toList
   }
 
 }

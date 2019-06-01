@@ -20,11 +20,11 @@ object MES_4C_LIENT extends App {
 
   val product1 = Product("P1")
 
-  val article_P1_10 = Article("A0", product1, 10.0);
-  val article_P1_20 = Article("A1", product1, 20.0);
+  val article_P1_10 = Article("A0", product1, 10.0); // 10 kg of product in article-bag
+  val article_P1_20 = Article("A1", product1, 20.0); // 20 kg of product in article-bag
 
-  Pallet("WarehousePallet1", article_P1_10, 100)
-  Pallet("BijstortPallet1", article_P1_20, 50)
+  Pallet("WarehousePallet1", article_P1_10, 100) // 100 article-bags on the warehouse pallet
+  Pallet("BijstortPallet1") // zero bags on the bijstort pallet
 
   // runtime
 
