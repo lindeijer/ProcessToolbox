@@ -26,7 +26,7 @@ object TransferItemsBetweenPallets extends TransferItemsBetweenPallets {}
 
 trait PalletSelector {
   def selectThePalletWithId(palletId: String): Pallet
-  def selectAnyPalletWithArticle(article: Article): Pallet
+  def selectAnyPalletWithProduct(product: Product): Pallet
 }
 
 object PalletSelector {}
@@ -46,28 +46,28 @@ class PalletScanner(location: Int) extends PalletSelector {
     if (scanEvent.code.equals(palletId)) {
       return Pallet(palletId)
     } else {
-      println("PalletScanner: not the right id=" + palletId + ", found scanEvent.code=" + scanEvent.code)
+      println("PalletScanner: not the right id, required " + palletId + " but found barcode " + scanEvent.code)
       selectWithId(palletId, scanner.scan())
     }
   }
 
-  override def selectAnyPalletWithArticle(article: Article): Pallet = {
-    println("PalletScanner: will scan a pallet with article=" + article)
-    selectWithArticle(article, scanner.scan())
+  override def selectAnyPalletWithProduct(product: Product): Pallet = {
+    println("PalletScanner: will scan a pallet with " + product)
+    selectWithProduct(product, scanner.scan())
   }
 
-  private def selectWithArticle(article: Article, scanEvent: ScannerEvent): Pallet = {
+  private def selectWithProduct(product: Product, scanEvent: ScannerEvent): Pallet = {
     if (Pallet.isCode(scanEvent.code)) {
       val pallet = Pallet(scanEvent.code)
-      if (pallet.article.equals(article)) {
+      if (pallet.article.product.equals(product)) {
         return pallet
       } else {
-        println("PalletScanner: not the right article=" + article + ", found pallet.article=" + pallet.article)
-        selectWithArticle(article, scanner.scan())
+        println("PalletScanner: not the right product, required " + product + " but found pallet with " + pallet.article.product)
+        selectWithProduct(product, scanner.scan())
       }
     } else {
       println("PalletScanner: not a pallet code=" + scanEvent.code)
-      selectWithArticle(article, scanner.scan())
+      selectWithProduct(product, scanner.scan())
     }
   }
 }
@@ -80,23 +80,23 @@ object PalletScanner {
 }
 // ----
 
-class SelectAnyPalletWithArticle extends (Exchange => Unit) {
+class SelectAnyPalletWithProduct extends (Exchange => Unit) {
 
   def apply(xnge: Exchange) = {
-    val article = xnge.get[Article](Article);
+    val product = xnge.get[Product](Product);
     val palletSelector = xnge.get[PalletSelector](PalletSelector);
-    println("SelectAnyPalletWithArticle: will select any pallet with article=" + article + " using selector=" + palletSelector)
-    xnge.remove(AnyPalletWithArticle)
-    val pallet = palletSelector.selectAnyPalletWithArticle(article);
-    println("SelectAnyPalletWithArticle: selected any pallet with article, pallet=" + pallet)
-    xnge.put(AnyPalletWithArticle, pallet)
+    println("SelectAnyPalletWithProduct: will select any pallet with " + product + " using selector=" + palletSelector)
+    xnge.remove(AnyPalletWithProduct)
+    val pallet = palletSelector.selectAnyPalletWithProduct(product);
+    println("SelectAnyPalletWithProduct: selected any pallet with " + pallet.article)
+    xnge.put(AnyPalletWithProduct, pallet)
   }
 
 }
 
-object SelectAnyPalletWithArticle extends SelectAnyPalletWithArticle {}
+object SelectAnyPalletWithProduct extends SelectAnyPalletWithProduct {}
 
-object AnyPalletWithArticle {}
+object AnyPalletWithProduct {}
 
 // ----
 

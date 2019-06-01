@@ -35,7 +35,7 @@ object MES_4C_LIENT extends App {
 
   xnge.put(PalletSelector, PalletScanner(0))
   xnge.put(PalletId, "BijstortPallet1")
-  xnge.put(Article, article_P1_10)
+  xnge.put(Product, product1)
   xnge.put(BijstortAmount, 101.101)
 
   bsv.process.process(xnge)
