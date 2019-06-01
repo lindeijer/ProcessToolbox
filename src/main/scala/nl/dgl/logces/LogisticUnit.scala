@@ -94,7 +94,7 @@ object Pallet {
  */
 trait Vessel {
 
-  val product: Product
+  var product: Product
   def amount: Double
   /**
    * return the new lot-amount
@@ -113,8 +113,19 @@ trait Vessel {
 
 object Vessel {
 
-  def transfer(srcVessel: Vessel, dstVessel: Vessel, amount: Double) = {
-    dstVessel.add(srcVessel.subtract(amount))
+  def transfer(src: Vessel, dst: Vessel, amount: Double) = {
+
+    println("Vessel.transfer: before src=" + src + ",dst=" + dst + ",amount=" + amount);
+    println("Vessel.transfer: before src.amount=" + src.amount + ",dst.amount=" + dst.amount);
+    if (dst.product.equals(Article.unknown) && dst.amount == 0) {
+      dst.product = src.product
+    } else if (dst.product.equals(src.product)) {
+      // OK!
+    } else {
+      throw new IllegalArgumentException("Destination Pallet has wrong article, found " + dst.product + " but expected " + src.product);
+    }
+    dst.add(src.subtract(amount))
+    println("Pallet.transfer: after src.amount=" + src.amount + ",dst.amount=" + dst.amount);
   }
 
   def apply(id: String, lot: Lot): VesselPure = {
@@ -146,7 +157,8 @@ object Vessels {
  */
 case class VesselPure(override val id: String, lot: Lot) extends LogisticUnit(id) with Vessel {
 
-  val product = lot.product
+  var product = lot.product
+
   private var amountPure: Double = lot.amount
 
   def amount: Double = amountPure
@@ -174,7 +186,7 @@ case class VesselPure(override val id: String, lot: Lot) extends LogisticUnit(id
 /**
  * Contains an amount of a single product from one or more lots.
  */
-case class VesselMixed(override val id: String, product: Product) extends LogisticUnit(id) with Vessel {
+case class VesselMixed(override val id: String, var product: Product) extends LogisticUnit(id) with Vessel {
 
   private val lots2amount: Map[Lot, Double] = HashMap.empty
 

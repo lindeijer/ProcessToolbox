@@ -69,8 +69,8 @@ class BijStortVoorbereiding {
       val bijstortPallet = xnge.get[Pallet](DstPallet)
       val bijstortScoopAmount = bijstortAmount - (bijstortPallet.totalArticleWeight_kg)
       //
-      val vitamineBak = Vessel("vitamineBak1", Lot("lot1", product, 10 * 1000)) // wordt door operator gepakt
-      val schepZak = Vessel("schepzak1", product) // print ook label ...
+      val vitamineBak = Vessel("vessel:vitaminebak:" + UUID.randomUUID(), Lot("lot:" + UUID.randomUUID(), product, 10 * 1000)) // wordt door operator gepakt
+      val schepZak = Vessel("vessel:schepzak:" + UUID.randomUUID(), product) // print ook label ...
       println("Weeg " + bijstortScoopAmount + " kg van " + product + " af uit " + vitamineBak + " en schep in " + schepZak)
       //
       xnge.put(SrcVessel, vitamineBak)
