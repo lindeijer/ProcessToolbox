@@ -7,12 +7,12 @@ import nl.dgl.bsv.ui.swing.BijStortVoorbereidingView
 import nl.dgl.ptb.dsl.Exchange
 import nl.dgl.logces.PalletSelector
 import nl.dgl.logces.PalletScanner
-import nl.dgl.logces.PalletCode
 import nl.dgl.logces.TransferItemsBetweenPallets
 import nl.dgl.logces.TransferProductBetweenVessels
 import nl.dgl.logces.Vessel
 import nl.dgl.logces.SrcVessel
 import nl.dgl.logces.DstVessel
+import nl.dgl.logces.PalletId
 
 object MES_4C_LIENT extends App {
 
@@ -34,7 +34,7 @@ object MES_4C_LIENT extends App {
   val xnge = new Exchange();
 
   xnge.put(PalletSelector, PalletScanner(0))
-  xnge.put(PalletCode, "BijstortPallet1")
+  xnge.put(PalletId, "BijstortPallet1")
   xnge.put(Article, article_P1_10)
   xnge.put(BijstortAmount, 101.101)
 

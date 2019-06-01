@@ -25,7 +25,7 @@ object TransferItemsBetweenPallets extends TransferItemsBetweenPallets {}
 // ----
 
 trait PalletSelector {
-  def selectThePalletWithCode(code: String): Pallet
+  def selectThePalletWithId(palletId: String): Pallet
   def selectAnyPalletWithArticle(article: Article): Pallet
 }
 
@@ -37,17 +37,17 @@ class PalletScanner(location: Int) extends PalletSelector {
 
   val scanner = Scanner(location)
 
-  override def selectThePalletWithCode(code: String): Pallet = {
-    println("PalletScanner: will scan a pallet with code=" + code)
-    selectWithCode(code, scanner.scan())
+  override def selectThePalletWithId(palletId: String): Pallet = {
+    println("PalletScanner: will scan a pallet with id=" + palletId)
+    selectWithId(palletId, scanner.scan())
   }
 
-  private def selectWithCode(code: String, scanEvent: ScannerEvent): Pallet = {
-    if (Pallet.isCode(scanEvent.code)) {
-      return Pallet(scanEvent.code)
+  private def selectWithId(palletId: String, scanEvent: ScannerEvent): Pallet = {
+    if (scanEvent.code.equals(palletId)) {
+      return Pallet(palletId)
     } else {
-      println("PalletScanner: not a pallet code=" + scanEvent.code)
-      selectWithCode(code, scanner.scan())
+      println("PalletScanner: not the right id=" + palletId + ", found scanEvent.code=" + scanEvent.code)
+      selectWithId(palletId, scanner.scan())
     }
   }
 
@@ -62,7 +62,7 @@ class PalletScanner(location: Int) extends PalletSelector {
       if (pallet.article.equals(article)) {
         return pallet
       } else {
-        println("PalletScanner: not with article pallet=" + pallet)
+        println("PalletScanner: not the right article=" + article + ", found pallet.article=" + pallet.article)
         selectWithArticle(article, scanner.scan())
       }
     } else {
@@ -100,23 +100,23 @@ object AnyPalletWithArticle {}
 
 // ----
 
-class SelectThePalletWithCode extends (Exchange => Unit) {
+class SelectThePalletWithId extends (Exchange => Unit) {
 
   def apply(xnge: Exchange) = {
-    val code = xnge.get[String](PalletCode)
+    val palletId = xnge.get[String](PalletId)
     val palletSelector = xnge.get[PalletSelector](PalletSelector);
-    println("SelectThePalletWithCode: will select the pallet with code=" + code + " using selector=" + palletSelector)
-    xnge.remove(ThePalletWithCode)
-    val pallet = palletSelector.selectThePalletWithCode(code)
-    println("SelectThePalletWithCode: selected the pallet with code, pallet=" + pallet)
-    xnge.put(ThePalletWithCode, pallet)
+    println("SelectThePalletWithId: will select the pallet with id=" + palletId + " using selector=" + palletSelector)
+    xnge.remove(ThePalletWithId)
+    val pallet = palletSelector.selectThePalletWithId(palletId)
+    println("SelectThePalletWithId: selected the pallet with id, pallet=" + pallet)
+    xnge.put(ThePalletWithId, pallet)
   }
 }
 
-object SelectThePalletWithCode extends SelectThePalletWithCode {}
+object SelectThePalletWithId extends SelectThePalletWithId {}
 
-object ThePalletWithCode {}
-object PalletCode {}
+object ThePalletWithId {}
+object PalletId {}
 
 ////////////////////////////////////////////////
 

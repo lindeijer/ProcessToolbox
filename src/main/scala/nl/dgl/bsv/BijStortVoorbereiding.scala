@@ -14,7 +14,7 @@ import nl.dgl.ptb.dsl.Process
 import nl.dgl.logces.Scanner
 import nl.dgl.logces.Product
 import nl.dgl.ptb.ui.swing.ProcessSwingView
-import nl.dgl.logces.PalletCode
+import nl.dgl.logces.PalletId
 import nl.dgl.logces.SelectAnyPalletWithArticle
 import nl.dgl.logces.TransferItemsBetweenPallets
 import nl.dgl.logces.TransferProductBetweenVessels
@@ -22,9 +22,8 @@ import nl.dgl.logces.SrcPallet
 import nl.dgl.logces.DstPallet
 import nl.dgl.bsv.ui.swing.BijStortVoorbereidingView
 import nl.dgl.logces.AnyPalletWithArticle
-import nl.dgl.logces.ThePalletWithCode
+import nl.dgl.logces.ThePalletWithId
 import nl.dgl.logces.PalletScanner
-import nl.dgl.logces.SelectThePalletWithCode
 import nl.dgl.logces.PalletSelector
 import nl.dgl.logces.SrcVessel
 import nl.dgl.logces.DstVessel
@@ -33,6 +32,8 @@ import nl.dgl.logces.Vessel
 import nl.dgl.logces.Scale
 import nl.dgl.logces.TransferProductBetweenVessels.AmountMarginPercent
 import nl.dgl.logces.Vessels
+import nl.dgl.logces.SelectThePalletWithId
+import nl.dgl.logces.ThePalletWithId
 
 class BijStortVoorbereiding {
 
@@ -45,10 +46,10 @@ class BijStortVoorbereiding {
         val bijstortItemCount = (bijstortAmount / itemAmount).toInt
         xnge.put(TransferItemsBetweenPallets.Count, bijstortItemCount)
       }) ~> //
-      Step(SelectThePalletWithCode) ~> //
+      Step(SelectThePalletWithId) ~> //
       Step(xnge => {
         val srcPallet = xnge.get[Pallet](AnyPalletWithArticle)
-        val dstPallet = xnge.get[Pallet](ThePalletWithCode)
+        val dstPallet = xnge.get[Pallet](ThePalletWithId)
         xnge.put(SrcPallet, srcPallet)
         xnge.put(DstPallet, dstPallet)
       }) ~>
