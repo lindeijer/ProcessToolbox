@@ -108,6 +108,10 @@ object Split {
     return new StepSplit(splitListKey, splitItemKey, splitItemResultKey, splitResultsKey, step)
   }
 
+  def apply(splitItemKey: String, step: Step): StepSplit = {
+    return new StepSplit(splitItemKey + "List", splitItemKey, splitItemKey + "Result", splitItemKey + "ResultList", step)
+  }
+
 }
 
 // ----

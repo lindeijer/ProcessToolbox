@@ -41,14 +41,14 @@ object MES_4C_LIENT extends App {
 
   xnge.put(PalletSelector, PalletScanner(0))
 
-  val bijstortLijst = List(Bijstort(product1, 101.101), Bijstort(product2, 202.202))
-  xnge.put(BijstortLijst, bijstortLijst);
+  val bijstortLijst = List(BSV.Ingedient(product1, 101.101), BSV.Ingedient(product2, 202.202))
+  xnge.put(BSV.BijstortLijst, bijstortLijst);
 
   bsv.process.process(xnge)
 
   // result
 
-  val bijstortResultaten = xnge.get[Map[Any, Any]](BijstortResultaten)
+  val bijstortResultaten = xnge.get[Map[Any, Any]](BSV.BijstortResultaaten)
 
   println("TransferItemCountBetweenPallets=" + xnge.get(TransferItemsBetweenPallets.Count))
   println("BijstortScoopAmount=" + xnge.get(TransferProductBetweenVessels.AmountActual))

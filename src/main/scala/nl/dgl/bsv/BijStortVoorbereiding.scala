@@ -40,13 +40,13 @@ class BijStortVoorbereiding {
 
   val bsvIngredientPalletZakken = Process { //
     Step(xnge => {
-      val product = xnge.get[Bijstort](Bijstort).product
+      val product = xnge.get[BSV.Ingedient](BSV.Bijstort).product
       xnge.put(Product, product)
     }) ~> //
       Step(SelectAnyPalletWithProduct) ~> //
       Step(xnge => {
         val palletWithProduct = xnge.get[Pallet](AnyPalletWithProduct)
-        val bijstortAmount = xnge.get[Bijstort](Bijstort).amount
+        val bijstortAmount = xnge.get[BSV.Ingedient](BSV.Bijstort).amount
         val itemAmount = palletWithProduct.article.weight_kg
         val bijstortItemCount = (bijstortAmount / itemAmount).toInt
         xnge.put(TransferItemsBetweenPallets.Count, bijstortItemCount)
@@ -65,7 +65,7 @@ class BijStortVoorbereiding {
   val bsvIngredientSchepZakken = Process { //
     Step(xnge => {
       val product = xnge.get[Product](Product)
-      val bijstortAmount = xnge.get[Bijstort](Bijstort).amount
+      val bijstortAmount = xnge.get[BSV.Ingedient](BSV.Bijstort).amount
       val bijstortPallet = xnge.get[Pallet](DstPallet)
       val bijstortScoopAmount = bijstortAmount - (bijstortPallet.totalArticleWeight_kg)
       //
@@ -78,7 +78,7 @@ class BijStortVoorbereiding {
       xnge.put(Scale, Scale(0))
       xnge.put(AmountMarginPercent, 10.0)
       xnge.put(TransferProductBetweenVessels.AmountTarget, bijstortScoopAmount)
-      xnge.put(BijstortResultaat, (bijstortPallet.totalArticleWeight_kg, bijstortScoopAmount))
+      xnge.put(BSV.BijstortResultaat, (bijstortPallet.totalArticleWeight_kg, bijstortScoopAmount))
     }) ~> //
       Step(TransferProductBetweenVessels)
   }
@@ -89,13 +89,18 @@ class BijStortVoorbereiding {
   }
 
   val process = Process { //
-    Split(BijstortLijst, Bijstort, BijstortResultaat, BijstortResultaten, bsvIngredient)
+    Split(BSV.Bijstort, bsvIngredient)
   }
 
 }
 
-case class Bijstort(product: Product, amount: Double) {}
+object BSV {
 
-object BijstortLijst {}
-object BijstortResultaat {}
-object BijstortResultaten {}
+  val Bijstort = "Bijstort"
+  val BijstortLijst = Bijstort + "List"
+  val BijstortResultaat = Bijstort + "Result"
+  val BijstortResultaaten = Bijstort + "ResultList"
+
+  case class Ingedient(product: Product, amount: Double) {}
+}
+
