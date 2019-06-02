@@ -4,6 +4,7 @@ import scala.swing._
 import nl.dgl.ptb.dsl.Process
 import nl.dgl.ptb.dsl.StepSequential
 import nl.dgl.ptb.dsl.StepConcurrent
+import nl.dgl.ptb.dsl.StepSplit
 import nl.dgl.ptb.dsl.Step
 import com.mxgraph.view.mxGraph
 import com.mxgraph.swing.mxGraphComponent
@@ -17,12 +18,14 @@ import com.mxgraph.model.mxCell
 import nl.dgl.ptb.dsl.StepStarted
 import nl.dgl.ptb.dsl.StepFinished
 import nl.dgl.ptb.dsl.StepFunction
+import nl.dgl.ptb.dsl.StepSplit
+import nl.dgl.ptb.dsl.StepSplit
 
 class ProcessSwingView(topProcess: Process) extends Component {
 
   val graph = new mxGraph();
 
-  val parent = graph.getDefaultParent();
+  val uberParent = graph.getDefaultParent();
 
   graph.getModel().beginUpdate();
 
@@ -31,7 +34,7 @@ class ProcessSwingView(topProcess: Process) extends Component {
   val step2view: HashMap[Step, Object] = HashMap.empty
 
   try {
-    viewStep(topProcess.top, parent, isBefore = true) // before is irrelevant
+    viewStep(topProcess.top, uberParent, isBefore = true) // before is irrelevant
     layout.execute(graph.getDefaultParent());
   } finally {
     graph.getModel().endUpdate();
@@ -43,29 +46,39 @@ class ProcessSwingView(topProcess: Process) extends Component {
 
   /////////////////////////////////////////////
 
-  def viewStep(step: Step, parent: Any, isBefore: Boolean): Object = { // mxCell
+  def viewStep(step: Step, vParent: Any, isBefore: Boolean): Object = { // mxCell
     step match {
       case StepSequential(before, after) => {
-        val vBefore = viewStep(before, parent, isBefore = true);
-        val vAfter = viewStep(after, parent, isBefore = false);
-        graph.insertEdge(parent, null, "~>", vBefore, vAfter);
+        println("ProcessSwingView.viewStep: StepSequential; isBefore=" + isBefore)
+        val vBefore = viewStep(before, vParent, isBefore = true);
+        val vAfter = viewStep(after, vParent, isBefore = false);
+        graph.insertEdge(vParent, null, "~>", vBefore, vAfter);
         if (isBefore) return vAfter else return vBefore
       }
       case stepFunction: StepFunction => {
-        val vStep = graph.insertVertex(parent, null, stepFunction.f.getClass.getName, 0, 0, 80, 30, "fillColor=green"); // 20, 20, 80,30 // x,y,w,h
+        println("ProcessSwingView.viewStep: StepFunction; isBefore=" + isBefore)
+        val vStep = graph.insertVertex(vParent, null, stepFunction.f.getClass.getSimpleName, 0, 0, 80, 30, "fillColor=green");
         step2view.put(step, vStep)
         return vStep
       }
       case process: Process => {
-        println("process=" + process + ",process.top=" + process.top + ",isBefore=" + isBefore)
-        val vProcess = graph.insertVertex(parent, null, process.getClass.getName, 0, 0, 80, 30, "fillColor=green"); // 20, 20, 80,30 // x,y,w,h
-        val vResult = viewStep(process.top, vProcess, isBefore) // if you are on the left, return the right and vice-versa
+        println("ProcessSwingView.viewStep: Process; isBefore=" + isBefore)
+        val vProcess = graph.insertVertex(vParent, null, "Process", 0, 0, 80, 30, "fillColor=green");
+        val vResult = viewStep(process.top, vProcess, isBefore)
         step2view.put(step, vProcess)
         return vResult
       }
+      case StepSplit(a, stepKey, c, d, stepToSplit) => {
+        println("ProcessSwingView.viewStep: StepSplit; stepKey=" + stepKey + ",isBefore=" + isBefore)
+        val vStepSplit = graph.insertVertex(vParent, null, "Split", 0, 0, 80, 30, "fillColor=green");
+        val vResult = viewStep(stepToSplit, vStepSplit, isBefore)
+        step2view.put(step, vStepSplit)
+        return vResult
+      }
 
-      case _ => {
-        val vertex = graph.insertVertex(parent, null, step.getClass.getName, 0, 0, 80, 30, "fillColor=green"); // 20, 20, 80,30 // x,y,w,h
+      case x => {
+        println("ProcessSwingView.viewStep: DEFAULT;  step=" + step + ",isBefore=" + isBefore)
+        val vertex = graph.insertVertex(vParent, null, step.getClass.getName, 0, 0, 80, 30, "fillColor=green"); // 20, 20, 80,30 // x,y,w,h
         step2view.put(step, vertex)
         return vertex
       }

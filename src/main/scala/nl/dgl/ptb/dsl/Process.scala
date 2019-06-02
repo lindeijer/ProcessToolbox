@@ -18,10 +18,6 @@ class Process(val top: Step) extends Step {
     xnge.listeners --= xngeListeners
   }
 
-  def notifySubStepChanged(stepEvent: StepEvent) = {
-    listeners.foreach(_.apply(stepEvent))
-  }
-
   val xngeListeners: ListBuffer[ExchangeEvent => Unit] = ListBuffer.empty
 
 }
@@ -50,10 +46,6 @@ case class StepConcurrent(a: Step, b: Step) extends Step {
     b.listeners -= notifySubStepChanged
   }
 
-  def notifySubStepChanged(subStepEvent: StepEvent) = {
-    listeners.foreach(_.apply(subStepEvent))
-  }
-
 }
 
 case class StepSequential(val a: Step, val b: Step) extends Step {
@@ -69,10 +61,6 @@ case class StepSequential(val a: Step, val b: Step) extends Step {
     b.listeners -= notifySubStepChanged
   }
 
-  def notifySubStepChanged(subStepEvent: StepEvent) = {
-    listeners.foreach(_.apply(subStepEvent))
-  }
-
 }
 
 class StepChoice(steps: Vector[Step], chooser: String) extends Step {
@@ -85,19 +73,25 @@ class StepChoice(steps: Vector[Step], chooser: String) extends Step {
 
 }
 
-class StepSplit(splitListKey: Any, splitItemKey: Any, splitItemResultKey: Any, splitResultsKey: Any, step: Step) extends Step {
+case class StepSplit(splitListKey: Any, splitItemKey: Any, splitItemResultKey: Any, splitResultsKey: Any, step: Step) extends Step {
 
-  override def step(xnge: Exchange) = {
+  override def step(xnge: Exchange) = {}
+
+  override def process(xnge: Exchange) = {
+    listeners.foreach(_.apply(new StepStarted(this, Instant.now)))
     val splitList = xnge.get[List[Any]](splitListKey)
     println("StepSplit: " + splitList + "=" + splitList);
     val splitResults = new HashMap[Any, Any]
     splitList.foreach(splitItem => {
       xnge.put(splitItemKey, splitItem)
+      step.listeners += notifySubStepChanged
       step.process(xnge);
+      step.listeners -= notifySubStepChanged
       val splitItemResult = xnge.get[Any](splitItemResultKey)
       splitResults.put(splitItem, splitItemResult)
     })
     xnge.put(splitResultsKey, splitResults.toMap)
+    listeners.foreach(_.apply(new StepFinished(this, Instant.now)))
   }
 
 }
@@ -148,6 +142,10 @@ abstract class Step {
   }
 
   val listeners: ListBuffer[StepEvent => Unit] = ListBuffer.empty
+
+  def notifySubStepChanged(subStepEvent: StepEvent) = {
+    listeners.foreach(_.apply(subStepEvent))
+  }
 
 }
 
