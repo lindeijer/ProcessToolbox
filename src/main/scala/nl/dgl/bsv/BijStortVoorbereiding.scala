@@ -38,54 +38,21 @@ import nl.dgl.ptb.dsl.Split
 
 class BijStortVoorbereiding {
 
-  val bsvIngredientPalletZakken = Process { //
+  val bsvIngredient = Process { //
     Step(xnge => {
       val product = xnge.get[BSV.Ingedient](BSV.Bijstort).product
       xnge.put(Product, product)
-    }) ~> //
+    }) ~>
       Step(SelectAnyPalletWithProduct) ~> //
+      Step(BsvSetupTransferIngredientFromAnyPalletToBsvPallet) ~> //
+      Step(TransferItemsBetweenPallets) ~> //
+      Step(BsvSetupTransferIngredientFromAnyVesselToBsvVessel) ~>
+      Step(TransferProductBetweenVessels) ~>
       Step(xnge => {
-        val palletWithProduct = xnge.get[Pallet](AnyPalletWithProduct)
-        val bijstortAmount = xnge.get[BSV.Ingedient](BSV.Bijstort).amount
-        val itemAmount = palletWithProduct.article.weight_kg
-        val bijstortItemCount = (bijstortAmount / itemAmount).toInt
-        xnge.put(TransferItemsBetweenPallets.Count, bijstortItemCount)
-        //
-        val bijstortPalletId = "pallet:" + UUID.randomUUID()
-        val bijstortPallet = Pallet(bijstortPalletId);
-        //
-        val srcPallet = xnge.get[Pallet](AnyPalletWithProduct)
-        val dstPallet = bijstortPallet
-        xnge.put(SrcPallet, srcPallet)
-        xnge.put(DstPallet, dstPallet)
-      }) ~>
-      Step(TransferItemsBetweenPallets)
-  }
-
-  val bsvIngredientSchepZakken = Process { //
-    Step(xnge => {
-      val product = xnge.get[Product](Product)
-      val bijstortAmount = xnge.get[BSV.Ingedient](BSV.Bijstort).amount
-      val bijstortPallet = xnge.get[Pallet](DstPallet)
-      val bijstortScoopAmount = bijstortAmount - (bijstortPallet.totalArticleWeight_kg)
-      //
-      val vitamineBak = Vessel("vessel:vitaminebak:" + UUID.randomUUID(), Lot("lot:" + UUID.randomUUID(), product, 10 * 1000)) // wordt door operator gepakt
-      val schepZak = Vessel("vessel:schepzak:" + UUID.randomUUID(), product) // print ook label ...
-      println("Weeg " + bijstortScoopAmount + " kg van " + product + " af uit " + vitamineBak + " en schep in " + schepZak)
-      //
-      xnge.put(SrcVessel, vitamineBak)
-      xnge.put(DstVessel, schepZak)
-      xnge.put(Scale, Scale(0))
-      xnge.put(AmountMarginPercent, 10.0)
-      xnge.put(TransferProductBetweenVessels.AmountTarget, bijstortScoopAmount)
-      xnge.put(BSV.BijstortResultaat, (bijstortPallet.totalArticleWeight_kg, bijstortScoopAmount))
-    }) ~> //
-      Step(TransferProductBetweenVessels)
-  }
-
-  val bsvIngredient = Process { //
-    bsvIngredientPalletZakken ~> //
-      bsvIngredientSchepZakken
+        val bijstortPallet = xnge.get[Pallet](DstPallet)
+        val bijstortScoopAmount = xnge.get[Double](TransferProductBetweenVessels.AmountActual)
+        xnge.put(BSV.BijstortResultaat, (bijstortPallet.totalArticleWeight_kg, bijstortScoopAmount))
+      })
   }
 
   val process = Process { //
@@ -104,3 +71,50 @@ object BSV {
   case class Ingedient(product: Product, amount: Double) {}
 }
 
+/////////////
+
+class BsvSetupTransferIngredientFromAnyPalletToBsvPallet extends (Exchange => Unit) {
+
+  def apply(xnge: Exchange) = {
+    val palletWithProduct = xnge.get[Pallet](AnyPalletWithProduct)
+    val bijstortAmount = xnge.get[BSV.Ingedient](BSV.Bijstort).amount
+    val itemAmount = palletWithProduct.article.weight_kg
+    val bijstortItemCount = (bijstortAmount / itemAmount).toInt
+    xnge.put(TransferItemsBetweenPallets.Count, bijstortItemCount)
+    //
+    val bijstortPalletId = "pallet:" + UUID.randomUUID()
+    val bijstortPallet = Pallet(bijstortPalletId);
+    //
+    val srcPallet = xnge.get[Pallet](AnyPalletWithProduct)
+    val dstPallet = bijstortPallet
+    xnge.put(SrcPallet, srcPallet)
+    xnge.put(DstPallet, dstPallet)
+  }
+}
+
+object BsvSetupTransferIngredientFromAnyPalletToBsvPallet extends BsvSetupTransferIngredientFromAnyPalletToBsvPallet {}
+
+////////////////
+
+class BsvSetupTransferIngredientFromAnyVesselToBsvVessel extends (Exchange => Unit) {
+
+  def apply(xnge: Exchange) = {
+    val product = xnge.get[Product](Product)
+    val bijstortAmount = xnge.get[BSV.Ingedient](BSV.Bijstort).amount
+    val bijstortPallet = xnge.get[Pallet](DstPallet)
+    val bijstortScoopAmount = bijstortAmount - (bijstortPallet.totalArticleWeight_kg)
+    //
+    val vitamineBak = Vessel("vessel:vitaminebak:" + UUID.randomUUID(), Lot("lot:" + UUID.randomUUID(), product, 10 * 1000)) // wordt door operator gepakt
+    val schepZak = Vessel("vessel:schepzak:" + UUID.randomUUID(), product) // print ook label ...
+    println("Weeg " + bijstortScoopAmount + " kg van " + product + " af uit " + vitamineBak + " en schep in " + schepZak)
+    //
+    xnge.put(SrcVessel, vitamineBak)
+    xnge.put(DstVessel, schepZak)
+    xnge.put(Scale, Scale(0))
+    xnge.put(AmountMarginPercent, 10.0)
+    xnge.put(TransferProductBetweenVessels.AmountTarget, bijstortScoopAmount)
+  }
+
+}
+
+object BsvSetupTransferIngredientFromAnyVesselToBsvVessel extends BsvSetupTransferIngredientFromAnyVesselToBsvVessel {}
