@@ -1,0 +1,125 @@
+#################################################################
+###  Generated with the experimental alpha version of the TTL exporter of WebVOWL (version 1.1.3)  http://visualdataweb.de/webvowl/   ###
+#################################################################
+
+@prefix : 		<http://visualdataweb.org/newOntology/> .
+@prefix rdf: 		<http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: 		<http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl: 		<http://www.w3.org/2002/07/owl#> .
+@prefix xsd: 		<http://www.w3.org/2001/XMLSchema#> .
+@prefix dc: 		<http://purl.org/dc/elements/1.1/> .
+@prefix xml: 		<http://www.w3.org/XML/1998/namespace> .
+@prefix wot: 		<http://xmlns.com/wot/0.1/> .
+@prefix vs: 		<http://www.w3.org/2003/06/sw-vocab-status/ns#> .
+@prefix foaf: 		<http://xmlns.com/foaf/0.1/> .
+@base 			<http://visualdataweb.org/newOntology/> .
+
+<http://visualdataweb.org/newOntology/> rdf:type owl:Ontology ;
+                                        dc:title "New ontology"@en; 
+                                        dc:description "New ontology description"@en . 
+#################################################################
+
+###  Property Definitions (Number of Property) 5 ###
+#  --------------------------- Property 0------------------------- 
+:amount rdf:type owl:DatatypeProperty, owl:FunctionalProperty ;
+        rdfs:label "amount"@en; 
+        rdfs:domain :Ingredient;
+        rdfs:range xsd:double . 
+#  --------------------------- Property 1------------------------- 
+:itemCount rdf:type owl:DatatypeProperty ;
+           rdfs:label "itemCount"@en; 
+           rdfs:domain :Pallet;
+           rdfs:range xsd:integer . 
+#  --------------------------- Property 2------------------------- 
+:itemCount rdf:type owl:DatatypeProperty ;
+           rdfs:label "itemCount"@en; 
+           rdfs:domain :ItemTranfer;
+           rdfs:range xsd:integer . 
+#  --------------------------- Property 3------------------------- 
+:amount rdf:type owl:DatatypeProperty ;
+        rdfs:label "amount"@en; 
+        rdfs:domain :Vessel;
+        rdfs:range xsd:double . 
+#  --------------------------- Property 4------------------------- 
+:amount rdf:type owl:DatatypeProperty ;
+        rdfs:label "amount"@en; 
+        rdfs:domain :ProductTransfer;
+        rdfs:range xsd:double . 
+###  Class Definitions (Number of Classes) 11 ###
+#  --------------------------- Class  0------------------------- 
+:Ingredient rdf:type owl:Class; 
+            rdfs:subClassOf [ rdf:type owl:Restriction ; 
+                              owl:onProperty :hasProduct;
+                              owl:someValuesFrom :Product
+                            ];
+            rdfs:label "Ingredient"@en . 
+#  --------------------------- Class  1------------------------- 
+:Product rdf:type owl:Class; 
+         rdfs:label "Product"@en . 
+#  --------------------------- Class  2------------------------- 
+:Recipe rdf:type owl:Class; 
+        rdfs:subClassOf [ rdf:type owl:Restriction ; 
+                          owl:onProperty :ingredient;
+                          owl:allValuesFrom :Ingredient
+                        ];
+        rdfs:label "Recipe"@en . 
+#  --------------------------- Class  3------------------------- 
+:HandAdd rdf:type owl:Class; 
+         rdfs:subClassOf [ rdf:type owl:Restriction ; 
+                           owl:onProperty :preparation;
+                           owl:someValuesFrom :HadAdd
+                         ];
+         rdfs:subClassOf :Ingredient ;
+         rdfs:label "HandAdd"@en . 
+#  --------------------------- Class  4------------------------- 
+:HadAdd rdf:type owl:Class; 
+        rdfs:label "Transfer"@en . 
+#  --------------------------- Class  5------------------------- 
+:Dosed rdf:type owl:Class; 
+       rdfs:subClassOf :Ingredient ;
+       rdfs:label "Dosed"@en . 
+#  --------------------------- Class  6------------------------- 
+:ItemTranfer rdf:type owl:Class; 
+             rdfs:subClassOf :HadAdd ;
+             rdfs:subClassOf [ rdf:type owl:Restriction ; 
+                               owl:onProperty :src;
+                               owl:someValuesFrom :Pallet
+                             ];
+             rdfs:subClassOf [ rdf:type owl:Restriction ; 
+                               owl:onProperty :dst;
+                               owl:someValuesFrom :Pallet
+                             ];
+             rdfs:label "ItemTranfer"@en . 
+#  --------------------------- Class  7------------------------- 
+:ProductTransfer rdf:type owl:Class; 
+                 rdfs:subClassOf :HadAdd ;
+                 rdfs:subClassOf [ rdf:type owl:Restriction ; 
+                                   owl:onProperty :src;
+                                   owl:someValuesFrom :Vessel
+                                 ];
+                 rdfs:subClassOf [ rdf:type owl:Restriction ; 
+                                   owl:onProperty :dst;
+                                   owl:someValuesFrom :Vessel
+                                 ];
+                 rdfs:label "ProductTransfer"@en . 
+#  --------------------------- Class  8------------------------- 
+:Pallet rdf:type owl:Class; 
+        rdfs:subClassOf [ rdf:type owl:Restriction ; 
+                          owl:onProperty :article;
+                          owl:someValuesFrom :Article
+                        ];
+        rdfs:label "Pallet"@en . 
+#  --------------------------- Class  9------------------------- 
+:Vessel rdf:type owl:Class; 
+        rdfs:subClassOf [ rdf:type owl:Restriction ; 
+                          owl:onProperty :product;
+                          owl:someValuesFrom :Product
+                        ];
+        rdfs:label "Vessel"@en . 
+#  --------------------------- Class  10------------------------- 
+:Article rdf:type owl:Class; 
+         rdfs:subClassOf [ rdf:type owl:Restriction ; 
+                           owl:onProperty :product;
+                           owl:someValuesFrom :Product
+                         ];
+         rdfs:label "Article"@en . 
