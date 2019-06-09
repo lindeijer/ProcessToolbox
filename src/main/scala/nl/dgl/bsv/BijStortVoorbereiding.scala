@@ -7,7 +7,9 @@ import java.util.ArrayList
 import scala.collection.mutable.ListBuffer
 import scala.util.Random
 import nl.dgl.ptb.dsl.Exchange
+import nl.dgl.ptb.dsl.Select
 import nl.dgl.logces.Pallet
+import nl.dgl.logces.Pallets
 import nl.dgl.logces.Article
 import nl.dgl.ptb.dsl.Step
 import nl.dgl.ptb.dsl.Process
@@ -44,6 +46,7 @@ class BijStortVoorbereiding {
       xnge.put(Product, product)
     }) ~>
       Step(SelectAnyPalletWithProduct) ~> //
+      Select(Pallets Where Product And Article) ~>
       Step(BsvSetupTransferIngredientFromAnyPalletToBsvPallet) ~> //
       Step(TransferItemsBetweenPallets) ~> //
       Step(BsvSetupTransferIngredientFromAnyVesselToBsvVessel) ~>

@@ -6,6 +6,9 @@ import java.util.UUID
 import scala.collection.mutable.HashMap
 import scala.collection.mutable.ListMap
 import scala.collection.mutable.Map
+import nl.dgl.ptb.dsl.SelectSource
+import nl.dgl.ptb.dsl.SelectFilter
+import nl.dgl.ptb.dsl.Exchange
 
 class LogisticUnit(val id: String) {}
 
@@ -25,6 +28,10 @@ case class Pallet(override val id: String, var article: Article) extends Logisti
 object Pallet {
 
   private val pallets: ListBuffer[Pallet] = ListBuffer.empty;
+
+  def currentList(): List[Pallet] = {
+    return pallets.toList;
+  }
 
   def apply(id: String, article: Article, itemCount: Int) = {
     pallets.find(_.id.equals(id)).foreach(pallet => {
@@ -87,7 +94,42 @@ object Pallet {
   }
 }
 
-// -------------------
+class PalletSelectFiler(source: SelectSource[Pallet], xngeKey: Any) extends SelectFilter[Pallet] with SelectSource[Pallet] {
+
+  // with SelectFilter
+
+  def And(xngeKey: Any): SelectFilter[Pallet] = {
+    return new PalletSelectFiler(this, xngeKey)
+  }
+
+  // with SelectSource
+
+  def Where(xngeKey: Any): SelectFilter[Pallet] = {
+    return And(xngeKey)
+  }
+
+  def candidates(xnge: Exchange): List[Pallet] = {
+    val candidates = source.candidates(xnge)
+    val xngeValue = xnge.get[Any](xngeKey)
+    xngeValue match {
+      case article: Article => return candidates.filter(_.article.equals(article))
+      case product: Product => return candidates.filter(_.article.product.equals(product))
+      case _                => return candidates
+    }
+  }
+}
+
+object Pallets extends SelectSource[Pallet] {
+
+  def Where(xngeKey: Any): SelectFilter[Pallet] = { new PalletSelectFiler(this, xngeKey) }
+  def candidates(xnge: Exchange): List[Pallet] = {
+    // this is the root-select-source so there is no xnge-key-value to select by
+    // so we want the current list of them all.
+    return Pallet.currentList()
+  }
+}
+
+/////////////////////////////////////////////////////////
 
 /**
  * A container for a product
