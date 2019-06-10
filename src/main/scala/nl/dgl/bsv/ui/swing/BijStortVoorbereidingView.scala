@@ -16,6 +16,14 @@ class BijStortVoorbereidingView(bsv: BijStortVoorbereiding) extends Frame {
 
   val processView = new ProcessSwingView(bsv.process)
 
+  processView.processViewListeners += notifyProcessViewChanged
+
+  def notifyProcessViewChanged() = {
+    pack()
+    validate()
+    repaint()
+  }
+
   bsv.process.listeners += processView.notifyStepChanged
   bsv.process.xngeListeners += notifyExchangeChanged
 

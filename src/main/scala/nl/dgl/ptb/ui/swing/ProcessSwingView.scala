@@ -20,10 +20,90 @@ import nl.dgl.ptb.dsl.StepFinished
 import nl.dgl.ptb.dsl.StepFunction
 import nl.dgl.ptb.dsl.StepSplit
 import nl.dgl.ptb.dsl.StepSplit
+import nl.dgl.ptb.dsl.StepSelect
+import javax.swing.JComboBox
+import java.util.EventObject
+import com.mxgraph.util.mxEventSource
+import com.mxgraph.util.mxEventObject
+import com.mxgraph.util.mxEvent
+import java.util.Collection
+import scala.util.Try
+import scala.concurrent.Await
+import scala.swing.event.SelectionChanged
 
 class ProcessSwingView(topProcess: Process) extends Component {
 
   val graph = new mxGraph();
+
+  val processViewListeners: ListBuffer[() => Unit] = ListBuffer.empty
+
+  object myMxGraphSelectionListener extends mxEventSource.mxIEventListener {
+    def invoke(sender: Object, evt: mxEventObject) {
+      val addedActuallyRemoved = evt.getProperty("added").asInstanceOf[Collection[_]];
+      val removedActuallyAdded = evt.getProperty("removed").asInstanceOf[Collection[_]];
+      // selectionChanged(model, added, removed);
+      myMxGraphSelectionAdded(removedActuallyAdded)
+    }
+  }
+
+  val stepView = new FlowPanel
+
+  def setStepViewContents(content: Component) {
+    stepView.contents += content;
+  }
+
+  setStepViewContents(new Label("Select a Step"))
+
+  def myMxGraphSelectionAdded(added: Collection[_]) {
+    println("added=" + added)
+    if (added == null || added.size() != 1) {
+      return ;
+    }
+    stepView.contents.clear()
+    val addedCells = added.toArray // (0) //
+    val addedCell = addedCells(0).asInstanceOf[mxCell]
+    val addedCellValue = addedCell.getValue
+    addedCellValue match {
+      case valueIsStep: Step => {
+        setStepViewContents(newStepViewContents(valueIsStep.asInstanceOf[Step]))
+      }
+      case valueIsString: String => {
+        setStepViewContents(new Label("[" + valueIsString + "]"))
+      }
+    }
+    processViewListeners.foreach(_.apply())
+  }
+
+  def newStepViewContents(step: Step): Component = {
+    step match {
+      case StepSelect(_) => newStepSelectViewContents(step.asInstanceOf[StepSelect])
+      case _             => new Label("[[" + step.toString() + "]]")
+    }
+
+  }
+
+  import scala.concurrent.duration._
+  import scala.util.{ Try, Success, Failure }
+
+  def newStepSelectViewContents(stepSelect: StepSelect): Component = {
+    Try(Await.result(stepSelect.candidatesFuture, 1 second)) match {
+      case Success(candidates) => {
+        val stepSelectComboBox = new ComboBox(candidates);
+        listenTo(stepSelectComboBox.selection) // when do we stop listening to this cb?
+        reactions += {
+          case SelectionChanged(`stepSelectComboBox`) =>
+            stepSelect.selectionPromise.success(stepSelectComboBox.selection.item)
+          // stepSelectComboBox.enabled = false the split-step is not stateless yet
+        }
+        return stepSelectComboBox
+      }
+      case Failure(failure) => { return new Label(failure.getMessage) }
+      case _                => { return new Label("Very Strange") }
+    }
+
+  }
+
+  graph.getSelectionModel.addListener(mxEvent.CHANGE, myMxGraphSelectionListener)
 
   val uberParent = graph.getDefaultParent();
 
@@ -40,9 +120,11 @@ class ProcessSwingView(topProcess: Process) extends Component {
     graph.getModel().endUpdate();
   }
 
-  private val graphComponent = new mxGraphComponent(graph);
+  private val graphComponent = new mxGraphComponent(graph)
 
-  val component = Component.wrap(graphComponent)
+  val component = new FlowPanel
+  component.contents += Component.wrap(graphComponent)
+  component.contents += stepView
 
   /////////////////////////////////////////////
 
@@ -74,6 +156,12 @@ class ProcessSwingView(topProcess: Process) extends Component {
         val vResult = viewStep(stepToSplit, vStepSplit, isBefore)
         step2view.put(step, vStepSplit)
         return vResult
+      }
+      case StepSelect(filter) => {
+        println("ProcessSwingView.viewStep: StepSelect; filter=" + filter + ",isBefore=" + isBefore)
+        val vStepSelect = graph.insertVertex(vParent, "Select", step, 0, 0, 80, 30, "fillColor=green");
+        step2view.put(step, vStepSelect)
+        return vStepSelect
       }
 
       case x => {
