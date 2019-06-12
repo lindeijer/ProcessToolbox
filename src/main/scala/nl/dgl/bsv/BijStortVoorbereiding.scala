@@ -74,7 +74,7 @@ object BSV {
 
 /////////////
 
-class BsvSetupTransferIngredientFromAnyPalletToBsvPallet extends (Exchange => Unit) {
+object BsvSetupTransferIngredientFromAnyPalletToBsvPallet extends (Exchange => Unit) {
 
   def apply(xnge: Exchange) = {
     val palletWithProduct = xnge.get[Pallet](Selection)
@@ -94,11 +94,9 @@ class BsvSetupTransferIngredientFromAnyPalletToBsvPallet extends (Exchange => Un
   }
 }
 
-object BsvSetupTransferIngredientFromAnyPalletToBsvPallet extends BsvSetupTransferIngredientFromAnyPalletToBsvPallet {}
-
 ////////////////
 
-class BsvSetupTransferIngredientFromAnyVesselToBsvVessel extends (Exchange => Unit) {
+object BsvSetupTransferIngredientFromAnyVesselToBsvVessel extends (Exchange => Unit) {
 
   def apply(xnge: Exchange) = {
     val vesselWithProduct = xnge.get[Vessel](Selection)
@@ -117,8 +115,6 @@ class BsvSetupTransferIngredientFromAnyVesselToBsvVessel extends (Exchange => Un
   }
 
 }
-
-object BsvSetupTransferIngredientFromAnyVesselToBsvVessel extends BsvSetupTransferIngredientFromAnyVesselToBsvVessel {}
 
 ////////////////////////
 

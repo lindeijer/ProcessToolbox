@@ -9,7 +9,7 @@ import nl.dgl.ptb.dsl.Selector
 object SrcPallet {}
 object DstPallet {}
 
-class TransferItemsBetweenPallets extends (Exchange => Unit) {
+object TransferItemsBetweenPallets extends (Exchange => Unit) {
 
   object Count {}
 
@@ -20,8 +20,6 @@ class TransferItemsBetweenPallets extends (Exchange => Unit) {
     Pallet.transfer(srcPallet, dstPallet, transferItemsBetweenPalletsCount)
   }
 }
-
-object TransferItemsBetweenPallets extends TransferItemsBetweenPallets {}
 
 // ----
 
@@ -119,10 +117,9 @@ object PalletScannerManiac {
   }
 }
 
-
 ////////////////////////////////////////////////
 
-class TransferProductBetweenVessels extends (Exchange => Unit) {
+object TransferProductBetweenVessels extends (Exchange => Unit) {
 
   object AmountTarget {}
   object AmountActual {}
@@ -144,8 +141,6 @@ class TransferProductBetweenVessels extends (Exchange => Unit) {
     println("TransferProductBetweenVessels: after; srcVessel.amount=" + srcVessel.amount + ",dstVessel.amount=" + dstVessel.amount)
   }
 }
-
-object TransferProductBetweenVessels extends TransferProductBetweenVessels {}
 
 object SrcVessel {}
 object DstVessel {}

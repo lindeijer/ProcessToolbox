@@ -12,7 +12,6 @@ import nl.dgl.logces.TransferProductBetweenVessels
 import nl.dgl.logces.Vessel
 import nl.dgl.logces.SrcVessel
 import nl.dgl.logces.DstVessel
-import nl.dgl.logces.PalletId
 import nl.dgl.logces.Lot
 import java.util.UUID
 import nl.dgl.ptb.dsl.Selector
