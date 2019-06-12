@@ -32,16 +32,20 @@ case class StepSelect(filter: SelectFilter[_]) extends Step { // NOT STATELESS, 
       candidatesFuture = candidatesPromise.future
     }
 
+    val candidates = filter.candidates(xnge)
+    candidatesPromise.success(candidates)
+
     def notifySelection(selection: Any) = {
-      selectionPromise.success(selection)
+      if (candidates.contains(selection)) {
+        selectionPromise.success(selection)
+      }
     }
 
     val selector = xnge.get[Selector](Selector)
     selector.listeners += notifySelection
 
-    // start listening to the selector. THe UI mat select as well.
+    // start listening to the selector. The UI may select as well.
 
-    candidatesPromise.success(filter.candidates(xnge))
     Try(Await.ready(selectionFuture, Duration.Inf)) match { // anti-pattern, in future change to onSuccess
       case Success(selectedCandidate) => { xnge.put(Selection, selectedCandidate.value.get.get) }
       case Failure(_)                 => { println("Failure Happened") }

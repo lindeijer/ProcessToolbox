@@ -16,13 +16,11 @@ import nl.dgl.ptb.dsl.Process
 import nl.dgl.logces.Scanner
 import nl.dgl.logces.Product
 import nl.dgl.ptb.ui.swing.ProcessSwingView
-import nl.dgl.logces.PalletId
 import nl.dgl.logces.TransferItemsBetweenPallets
 import nl.dgl.logces.TransferProductBetweenVessels
 import nl.dgl.logces.SrcPallet
 import nl.dgl.logces.DstPallet
 import nl.dgl.bsv.ui.swing.BijStortVoorbereidingView
-import nl.dgl.logces.ThePalletWithId
 import nl.dgl.logces.PalletScanner
 import nl.dgl.logces.PalletSelector
 import nl.dgl.logces.SrcVessel
@@ -32,11 +30,11 @@ import nl.dgl.logces.Vessel
 import nl.dgl.logces.Scale
 import nl.dgl.logces.TransferProductBetweenVessels.AmountMarginPercent
 import nl.dgl.logces.Vessels
-import nl.dgl.logces.ThePalletWithId
 import nl.dgl.ptb.dsl.Split
 import nl.dgl.ptb.dsl.SelectSource
 import nl.dgl.ptb.dsl.SelectFilter
 import nl.dgl.ptb.dsl.Selection
+import nl.dgl.logces.VesselSelectFiler
 
 class BijStortVoorbereiding {
 
@@ -131,30 +129,6 @@ object VitamineBakken extends SelectSource[Vessel] {
     // this is the root-select-source so there is no xnge-key-value to select by
     // so we want the current list of them all.
     return Vessels.vessels.toList
-  }
-}
-
-class VesselSelectFiler(source: SelectSource[Vessel], xngeKey: Any) extends SelectFilter[Vessel] with SelectSource[Vessel] {
-
-  // with SelectFilter
-
-  def And(xngeKey: Any): SelectFilter[Vessel] = {
-    return new VesselSelectFiler(this, xngeKey)
-  }
-
-  // with SelectSource
-
-  def Where(xngeKey: Any): SelectFilter[Vessel] = {
-    return And(xngeKey)
-  }
-
-  def candidates(xnge: Exchange): List[Vessel] = {
-    val candidates = source.candidates(xnge)
-    val xngeValue = xnge.get[Any](xngeKey)
-    xngeValue match {
-      case article: Product => return candidates.filter(_.product.equals(article))
-      case _                => return candidates
-    }
   }
 }
 

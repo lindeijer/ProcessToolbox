@@ -194,6 +194,30 @@ object Vessels {
 
 }
 
+class VesselSelectFiler(source: SelectSource[Vessel], xngeKey: Any) extends SelectFilter[Vessel] with SelectSource[Vessel] {
+
+  // with SelectFilter
+
+  def And(xngeKey: Any): SelectFilter[Vessel] = {
+    return new VesselSelectFiler(this, xngeKey)
+  }
+
+  // with SelectSource
+
+  def Where(xngeKey: Any): SelectFilter[Vessel] = {
+    return And(xngeKey)
+  }
+
+  def candidates(xnge: Exchange): List[Vessel] = {
+    val candidates = source.candidates(xnge)
+    val xngeValue = xnge.get[Any](xngeKey)
+    xngeValue match {
+      case article: Product => return candidates.filter(_.product.equals(article))
+      case _                => return candidates
+    }
+  }
+}
+
 /**
  * Contains an amount of a single product from a single lot.
  */
