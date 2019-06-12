@@ -4,6 +4,7 @@ import scala.collection.mutable.ListBuffer
 import scala.util.Random
 import nl.dgl.ptb.dsl.Exchange
 import nl.dgl.ptb.dsl.Step
+import nl.dgl.ptb.dsl.Selector
 
 object SrcPallet {}
 object DstPallet {}
@@ -24,9 +25,9 @@ object TransferItemsBetweenPallets extends TransferItemsBetweenPallets {}
 
 // ----
 
-trait PalletSelector {
-  def selectThePalletWithId(palletId: String): Pallet
-  def selectAnyPalletWithProduct(product: Product): Pallet
+trait PalletSelector extends Selector {
+  //def selectThePalletWithId(palletId: String): Pallet
+  //def selectAnyPalletWithProduct(product: Product): Pallet
 }
 
 object PalletSelector {}
@@ -37,7 +38,7 @@ class PalletScanner(location: Int) extends PalletSelector {
 
   val scanner = Scanner(location)
 
-  override def selectThePalletWithId(palletId: String): Pallet = {
+  def selectThePalletWithId(palletId: String): Pallet = {
     println("PalletScanner: will scan a pallet with id=" + palletId)
     selectWithId(palletId, scanner.scan())
   }
@@ -51,7 +52,7 @@ class PalletScanner(location: Int) extends PalletSelector {
     }
   }
 
-  override def selectAnyPalletWithProduct(product: Product): Pallet = {
+  def selectAnyPalletWithProduct(product: Product): Pallet = {
     println("PalletScanner: will scan a pallet with " + product)
     selectWithProduct(product, scanner.scan())
   }
@@ -78,45 +79,46 @@ object PalletScanner {
     new PalletScanner(location)
   }
 }
-// ----
 
-class SelectAnyPalletWithProduct extends (Exchange => Unit) {
+// =====================================
 
-  def apply(xnge: Exchange) = {
-    val product = xnge.get[Product](Product);
-    val palletSelector = xnge.get[PalletSelector](PalletSelector);
-    println("SelectAnyPalletWithProduct: will select any pallet with " + product + " using selector=" + palletSelector)
-    xnge.remove(AnyPalletWithProduct)
-    val pallet = palletSelector.selectAnyPalletWithProduct(product);
-    println("SelectAnyPalletWithProduct: selected any pallet with " + pallet.article)
-    xnge.put(AnyPalletWithProduct, pallet)
+import java.util.concurrent._
+
+class PalletScannerManiac(location: Int) extends PalletSelector {
+
+  val scanner = Scanner(location)
+  val ex = new ScheduledThreadPoolExecutor(1)
+  val task = new Runnable {
+    def run() = {
+      val selectedPallet = selectAnyPellet()
+      println("selectedPallet=" + selectedPallet)
+      listeners.foreach(_.apply(selectedPallet))
+    }
+  }
+  val f = ex.scheduleAtFixedRate(task, 1, 5, TimeUnit.SECONDS)
+
+  private def selectAnyPellet(): Pallet = {
+    selectAnyPellet(scanner.scan())
+  }
+
+  private def selectAnyPellet(scanEvent: ScannerEvent): Pallet = {
+    if (Pallet.isCode(scanEvent.code)) {
+      Pallet(scanEvent.code)
+    } else {
+      println("PalletScanner: not a pallet code=" + scanEvent.code)
+      selectAnyPellet(scanner.scan())
+    }
   }
 
 }
 
-object SelectAnyPalletWithProduct extends SelectAnyPalletWithProduct {}
+object PalletScannerManiac {
 
-object AnyPalletWithProduct {}
-
-// ----
-
-class SelectThePalletWithId extends (Exchange => Unit) {
-
-  def apply(xnge: Exchange) = {
-    val palletId = xnge.get[String](PalletId)
-    val palletSelector = xnge.get[PalletSelector](PalletSelector);
-    println("SelectThePalletWithId: will select the pallet with id=" + palletId + " using selector=" + palletSelector)
-    xnge.remove(ThePalletWithId)
-    val pallet = palletSelector.selectThePalletWithId(palletId)
-    println("SelectThePalletWithId: selected the pallet with id, pallet=" + pallet)
-    xnge.put(ThePalletWithId, pallet)
+  def apply(location: Int) = {
+    new PalletScannerManiac(location)
   }
 }
 
-object SelectThePalletWithId extends SelectThePalletWithId {}
-
-object ThePalletWithId {}
-object PalletId {}
 
 ////////////////////////////////////////////////
 
