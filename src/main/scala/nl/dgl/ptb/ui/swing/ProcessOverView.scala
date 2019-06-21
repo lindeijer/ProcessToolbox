@@ -6,6 +6,7 @@ import scala.swing.ListView
 import scala.collection.mutable.ListBuffer
 import nl.dgl.ptb.dsl.ExchangeEvent
 import nl.dgl.ptb.dsl.Process
+import scala.swing.ScrollPane
 
 class ProcessOverView(process: Process) extends BoxPanel(Orientation.Vertical) {
 
@@ -25,8 +26,8 @@ class ProcessOverView(process: Process) extends BoxPanel(Orientation.Vertical) {
 
   val exchangeView = new ListView[String](exchangeEvents);
 
-  contents += processView.component
-  contents += exchangeView
+  contents += new ScrollPane(processView.component)
+  contents += new ScrollPane(exchangeView)
 
   ///////////////////////////
 
