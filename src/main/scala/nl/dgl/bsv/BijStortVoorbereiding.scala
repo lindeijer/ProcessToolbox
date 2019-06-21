@@ -15,12 +15,10 @@ import nl.dgl.ptb.dsl.Step
 import nl.dgl.ptb.dsl.Process
 import nl.dgl.logces.Scanner
 import nl.dgl.logces.Product
-import nl.dgl.ptb.ui.swing.ProcessSwingView
 import nl.dgl.logces.TransferItemsBetweenPallets
 import nl.dgl.logces.TransferProductBetweenVessels
 import nl.dgl.logces.SrcPallet
 import nl.dgl.logces.DstPallet
-import nl.dgl.bsv.ui.swing.BijStortVoorbereidingView
 import nl.dgl.logces.PalletScanner
 import nl.dgl.logces.PalletSelector
 import nl.dgl.logces.SrcVessel

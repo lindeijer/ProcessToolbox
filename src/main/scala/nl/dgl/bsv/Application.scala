@@ -3,7 +3,6 @@ package nl.dgl.bsv
 import nl.dgl.logces.Product
 import nl.dgl.logces.Article
 import nl.dgl.logces.Pallet
-import nl.dgl.bsv.ui.swing.BijStortVoorbereidingView
 import nl.dgl.ptb.dsl.Exchange
 import nl.dgl.logces.PalletSelector
 import nl.dgl.logces.PalletScanner
@@ -18,8 +17,13 @@ import nl.dgl.ptb.dsl.Selector
 import nl.dgl.logces.PalletScannerManiac
 import nl.dgl.logces.Scale
 import nl.dgl.logces.TransferProductBetweenVessels.AmountMarginPercent
+import nl.dgl.ptb.ui.swing.ProcessOverView
+import nl.dgl.ptb.ui.swing.ProcessOverView
+import scala.swing.Frame
 
-object MES_4C_LIENT extends App {
+object MES_4C_LIENT extends Frame with App {
+
+  title = "BijStortVoorbereiding"
 
   // environment
 
@@ -51,7 +55,11 @@ object MES_4C_LIENT extends App {
   // runtime
 
   val bsv = new BijStortVoorbereiding();
-  new BijStortVoorbereidingView(bsv);
+  val bsvView = new ProcessOverView(bsv.process);
+
+  contents = bsvView
+
+  open()
 
   // xnge
 
