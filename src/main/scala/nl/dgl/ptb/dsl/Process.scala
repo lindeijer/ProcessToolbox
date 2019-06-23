@@ -3,8 +3,17 @@ package nl.dgl.ptb.dsl
 import scala.collection.mutable.ListBuffer
 import java.time.Instant
 import scala.collection.mutable.HashMap
+import scala.concurrent.Promise
+import java.util.concurrent.atomic.AtomicInteger
 
-class Process(val top: Step) extends Step {
+case class Process private (val top: Step, i: Int) extends Step(i) {
+
+  def this(top: Step) = this(top, StepConstructionHelper.counter.incrementAndGet())
+
+  override def split(): Step = {
+    println("Process.split: top=" + top)
+    Process(top.split())
+  }
 
   override def step(xnge: Exchange) = {}
 
@@ -32,7 +41,11 @@ object Process {
 
 // ------
 
-case class StepConcurrent(a: Step, b: Step) extends Step {
+case class StepConcurrent private (a: Step, b: Step, i: Int) extends Step(i) {
+
+  def this(a: Step, b: Step) = this(a, b, StepConstructionHelper.counter.getAndIncrement)
+
+  def split(): Step = ???
 
   override def step(xnge: Exchange) = {}
 
@@ -48,7 +61,14 @@ case class StepConcurrent(a: Step, b: Step) extends Step {
 
 }
 
-case class StepSequential(val a: Step, val b: Step) extends Step {
+case class StepSequential private (val a: Step, val b: Step, i: Int) extends Step(i) {
+
+  def this(a: Step, b: Step) = this(a, b, StepConstructionHelper.counter.getAndIncrement)
+
+  def split(): Step = {
+    println("StepSequential.split: a=" + a + ",b=" + b)
+    StepSequential(a.split, b.split, StepConstructionHelper.counter.incrementAndGet())
+  }
 
   override def step(xnge: Exchange) = {}
 
@@ -63,7 +83,11 @@ case class StepSequential(val a: Step, val b: Step) extends Step {
 
 }
 
-class StepChoice(steps: Vector[Step], chooser: String) extends Step {
+class StepChoice private (steps: Vector[Step], chooser: String, i: Int) extends Step(i) {
+
+  def this(steps: Vector[Step], chooser: String) = this(steps, chooser, StepConstructionHelper.counter.getAndIncrement)
+
+  def split(): Step = ???
 
   override def step(xnge: Exchange) = {
     val chosenIndex = xnge.get[Int](chooser)
@@ -73,23 +97,34 @@ class StepChoice(steps: Vector[Step], chooser: String) extends Step {
 
 }
 
-case class StepSplit(splitListKey: Any, splitItemKey: Any, splitItemResultKey: Any, splitResultsKey: Any, step: Step) extends Step {
+case class StepSplit private (splitListKey: Any, splitItemKey: Any, splitItemResultKey: Any, splitResultsKey: Any, stepToSplit: Step, i: Int) extends Step(i) {
+
+  def this(splitListKey: Any, splitItemKey: Any, splitItemResultKey: Any, splitResultsKey: Any, stepToSplit: Step) = this(splitListKey, splitItemKey, splitItemResultKey, splitResultsKey, stepToSplit, StepConstructionHelper.counter.getAndIncrement)
+
+  def split(): Step = ???
 
   override def step(xnge: Exchange) = {}
+
+  val items2StepPromise = Promise[Map[Any, Step]]()
+  val items2StepFuture = items2StepPromise.future
 
   override def process(xnge: Exchange) = {
     listeners.foreach(_.apply(new StepStarted(this, Instant.now)))
     val splitList = xnge.get[List[Any]](splitListKey)
-    println("StepSplit: " + splitList + "=" + splitList);
+    val items2Step = splitList.map {
+      (_, stepToSplit.split())
+    } toMap;
+    items2StepPromise.success(items2Step)
     val splitResults = new HashMap[Any, Any]
-    splitList.foreach(splitItem => {
+    for (splitItem <- splitList) {
+      val stepForItem = items2Step.get(splitItem).get
       xnge.put(splitItemKey, splitItem)
-      step.listeners += notifySubStepChanged
-      step.process(xnge);
-      step.listeners -= notifySubStepChanged
+      stepForItem.listeners += notifySubStepChanged
+      stepForItem.process(xnge);
+      stepForItem.listeners -= notifySubStepChanged
       val splitItemResult = xnge.get[Any](splitItemResultKey)
       splitResults.put(splitItem, splitItemResult)
-    })
+    }
     xnge.put(splitResultsKey, splitResults.toMap)
     listeners.foreach(_.apply(new StepFinished(this, Instant.now)))
   }
@@ -117,7 +152,13 @@ trait StepEvent {
 case class StepStarted(step: Step, instant: Instant) extends StepEvent {}
 case class StepFinished(step: Step, instant: Instant) extends StepEvent {}
 
-abstract class Step {
+object StepConstructionHelper {
+  val counter = new AtomicInteger(0)
+}
+
+abstract class Step(val index: Int) {
+
+  def split(): Step
 
   def ~>(next: Step): Step = {
     new StepSequential(this, next);
@@ -149,8 +190,14 @@ abstract class Step {
 
 }
 
-class StepFunction(val f: Exchange => Any) extends Step {
+case class StepFunction private (val f: Exchange => Any, i: Int) extends Step(i) {
 
+  def this(f: Exchange => Any) = this(f, StepConstructionHelper.counter.incrementAndGet())
+
+  def split(): Step = {
+    StepFunction(f, StepConstructionHelper.counter.incrementAndGet()) // NO CLONE HERE OF F, SO THE F MAY NOT HAVE SIDE-EFFECTS
+  }
+  
   override def step(xnge: Exchange) = {
     f.apply(xnge)
   }

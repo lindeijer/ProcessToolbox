@@ -13,34 +13,31 @@ trait Selector {
 object Selector
 object Selection
 
-case class StepSelect(filter: SelectFilter[_]) extends Step { // NOT STATELESS, CAN'T BE REUSED IN SPLIT
+case class StepSelect private (filter: SelectFilter[_], i: Int) extends Step(i) {
+
+  def this(filter: SelectFilter[_]) = this(filter, StepConstructionHelper.counter.incrementAndGet())
+
+  def split: Step = {
+    println("StepSelect.split: NOT CLONED filter=" + filter)
+    StepSelect(filter, StepConstructionHelper.counter.incrementAndGet())
+  }
 
   // selectionFuture because the selection will occur in the future
-  var selectionPromise = Promise[Any]()
-  var selectionFuture = selectionPromise.future
+  val selectionPromise = Promise[Any]()
+  val selectionFuture = selectionPromise.future
 
   // candidatesPromise because we will know about the candidates when the xnge arrives.
-  var candidatesPromise = Promise[List[Any]]()
-  var candidatesFuture = candidatesPromise.future
+  val candidatesPromise = Promise[List[Any]]()
+  val candidatesFuture = candidatesPromise.future
 
   def step(xnge: Exchange): Unit = {
-    if (candidatesPromise.isCompleted) {
-      println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-      selectionPromise = Promise[Any]()
-      selectionFuture = selectionPromise.future
-      candidatesPromise = Promise[List[Any]]()
-      candidatesFuture = candidatesPromise.future
-    }
-
     val candidates = filter.candidates(xnge)
     candidatesPromise.success(candidates)
-
     def notifySelection(selection: Any) = {
       if (candidates.contains(selection)) {
         selectionPromise.success(selection)
       }
     }
-
     val selector = xnge.get[Selector](Selector)
     selector.listeners += notifySelection
 
@@ -53,6 +50,7 @@ case class StepSelect(filter: SelectFilter[_]) extends Step { // NOT STATELESS, 
     }
     selector.listeners -= notifySelection
   }
+
 }
 
 /**
