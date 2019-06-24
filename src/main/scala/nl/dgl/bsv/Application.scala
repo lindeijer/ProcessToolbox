@@ -49,8 +49,12 @@ object MES_4C_LIENT extends Frame with App {
   Pallet("WarehousePallet7", article_P2_50, 200)
   Pallet("WarehousePallet8", article_P2_60, 200)
 
-  Vessel("vessel:vitaminebak:" + UUID.randomUUID(), Lot("lot:" + UUID.randomUUID(), product1, 10 * 1000))
-  Vessel("vessel:vitaminebak:" + UUID.randomUUID(), Lot("lot:" + UUID.randomUUID(), product2, 10 * 1000))
+  def randomID(): String = {
+    UUID.randomUUID().toString().split("-")(0)
+  }
+
+  Vessel("vitaminebak:" + randomID, Lot("lot:" + randomID, product1, 10 * 1000))
+  Vessel("vitaminebak:" + randomID, Lot("lot:" + randomID, product2, 10 * 1000))
 
   // runtime
 

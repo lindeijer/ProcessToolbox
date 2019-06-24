@@ -26,7 +26,7 @@ class ProcessOverView(process: Process) extends BoxPanel(Orientation.Vertical) {
 
   val exchangeView = new ListView[String](exchangeEvents);
 
-  contents += new ScrollPane(processView.component)
+  contents += new ScrollPane(processView)
   contents += new ScrollPane(exchangeView)
 
   ///////////////////////////

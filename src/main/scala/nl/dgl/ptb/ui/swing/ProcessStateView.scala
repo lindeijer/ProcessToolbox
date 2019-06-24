@@ -31,11 +31,13 @@ import ExecutionContext.Implicits.global
 import scala.util.{ Try, Success, Failure }
 import scala.concurrent.duration._
 import scala.collection.mutable.ListBuffer
+import scala.swing.BoxPanel
+import scala.swing.Orientation
 
 /**
  * A view upon the process state, where each step has a state.
  */
-class ProcessStateView(topProcess: Process) extends Component {
+class ProcessStateView(topProcess: Process) extends BoxPanel(Orientation.Vertical) {
 
   val graph = new mxGraph() {
     override def convertValueToString(x: Any): String = {
@@ -135,11 +137,12 @@ class ProcessStateView(topProcess: Process) extends Component {
     graph.getModel().endUpdate();
   }
 
-  private val graphComponent = new mxGraphComponent(graph)
+  val theMxGraphComponent = new mxGraphComponent(graph);
+  val graphView = new FlowPanel
+  graphView.contents += Component.wrap(theMxGraphComponent);
 
-  val component = new FlowPanel
-  component.contents += Component.wrap(graphComponent)
-  component.contents += stepView
+  contents += graphView
+  contents += stepView
 
   /////////////////////////////////////////////
 
