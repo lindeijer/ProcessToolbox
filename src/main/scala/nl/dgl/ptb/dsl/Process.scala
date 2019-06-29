@@ -8,7 +8,7 @@ import java.util.concurrent.atomic.AtomicInteger
 
 case class Process private (val top: Step, i: Int) extends Step(i) {
 
-  def this(top: Step) = this(top, StepConstructionHelper.counter.incrementAndGet())
+  def this(top: Step) = this(top, StepConstructionHelper.counter.getAndIncrement())
 
   override def split(): Step = {
     println("Process.split: top=" + top)
@@ -28,6 +28,10 @@ case class Process private (val top: Step, i: Int) extends Step(i) {
   }
 
   val xngeListeners: ListBuffer[ExchangeEvent => Unit] = ListBuffer.empty
+
+  override def toString(): String = {
+    return "Process@" + i;
+  }
 
 }
 
@@ -67,7 +71,7 @@ case class StepSequential private (val a: Step, val b: Step, i: Int) extends Ste
 
   def split(): Step = {
     println("StepSequential.split: a=" + a + ",b=" + b)
-    StepSequential(a.split, b.split, StepConstructionHelper.counter.incrementAndGet())
+    StepSequential(a.split, b.split, StepConstructionHelper.counter.getAndIncrement())
   }
 
   override def step(xnge: Exchange) = {}
@@ -192,12 +196,12 @@ abstract class Step(val index: Int) {
 
 case class StepFunction private (val f: Exchange => Any, i: Int) extends Step(i) {
 
-  def this(f: Exchange => Any) = this(f, StepConstructionHelper.counter.incrementAndGet())
+  def this(f: Exchange => Any) = this(f, StepConstructionHelper.counter.getAndIncrement())
 
   def split(): Step = {
-    StepFunction(f, StepConstructionHelper.counter.incrementAndGet()) // NO CLONE HERE OF F, SO THE F MAY NOT HAVE SIDE-EFFECTS
+    StepFunction(f, StepConstructionHelper.counter.getAndIncrement()) // NO CLONE HERE OF F, SO THE F MAY NOT HAVE SIDE-EFFECTS
   }
-  
+
   override def step(xnge: Exchange) = {
     f.apply(xnge)
   }
