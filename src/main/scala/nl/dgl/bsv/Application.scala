@@ -59,7 +59,7 @@ object MES_4C_LIENT extends Frame with App {
   // runtime
 
   val bsv = new BijStortVoorbereiding();
-  val bsvView = new ProcessOverView(bsv.process);
+  val bsvView = new ProcessOverView(bsv);
 
   contents = bsvView
 
@@ -76,7 +76,7 @@ object MES_4C_LIENT extends Frame with App {
 
   xnge.put(Scale, Scale(0))
   xnge.put(AmountMarginPercent, 10.0)
-  bsv.process.process(xnge)
+  bsv.process(xnge)
 
   // result
 

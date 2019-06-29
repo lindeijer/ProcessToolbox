@@ -34,9 +34,8 @@ import nl.dgl.ptb.dsl.SelectFilter
 import nl.dgl.ptb.dsl.Selection
 import nl.dgl.logces.VesselSelectFiler
 
-class BijStortVoorbereiding {
-
-  val bsvIngredient = Process { //
+class BijStortVoorbereiding extends Process({ //
+  Split(BSV.Bijstort, Process { //
     Step(xnge => {
       val product = xnge.get[BSV.Ingedient](BSV.Bijstort).product
       xnge.put(Product, product)
@@ -52,13 +51,9 @@ class BijStortVoorbereiding {
         val bijstortScoopAmount = xnge.get[Double](TransferProductBetweenVessels.AmountActual)
         xnge.put(BSV.BijstortResultaat, (bijstortPallet.totalArticleWeight_kg, bijstortScoopAmount))
       })
-  }
+  })
 
-  val process = Process { //
-    Split(BSV.Bijstort, bsvIngredient)
-  }
-
-}
+})
 
 object BSV {
 
