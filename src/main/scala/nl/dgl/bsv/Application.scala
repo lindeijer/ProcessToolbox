@@ -20,6 +20,7 @@ import nl.dgl.logces.TransferProductBetweenVessels.AmountMarginPercent
 import nl.dgl.ptb.ui.swing.ProcessOverView
 import nl.dgl.ptb.ui.swing.ProcessOverView
 import scala.swing.Frame
+import nl.dgl.ptb.dsl.ExchangeGremlin
 
 object MES_4C_LIENT extends Frame with App {
 
@@ -67,7 +68,7 @@ object MES_4C_LIENT extends Frame with App {
 
   // xnge
 
-  val xnge = new Exchange();
+  val xnge = new ExchangeGremlin();
 
   xnge.put(Selector, PalletScannerManiac(0)) //
 
