@@ -20,6 +20,9 @@ import nl.dgl.logces.TransferProductBetweenVessels.AmountMarginPercent
 import nl.dgl.ptb.ui.swing.ProcessOverView
 import nl.dgl.ptb.ui.swing.ProcessOverView
 import scala.swing.Frame
+import nl.dgl.ptb.dsl.ExchangeGremlin
+import nl.dgl.logces.VesselSelector
+import nl.dgl.logces.VesselScannerLoser
 
 object MES_4C_LIENT extends Frame with App {
 
@@ -58,6 +61,10 @@ object MES_4C_LIENT extends Frame with App {
 
   // runtime
 
+  implicit val aPalletScanner = PalletScannerManiac(0)
+  implicit val aVesselScanner = VesselScannerLoser(0);
+  implicit val scale0 = Scale(0)
+
   val bsv = new BijStortVoorbereiding();
   val bsvView = new ProcessOverView(bsv);
 
@@ -67,9 +74,7 @@ object MES_4C_LIENT extends Frame with App {
 
   // xnge
 
-  val xnge = new Exchange();
-
-  xnge.put(Selector, PalletScannerManiac(0)) //
+  val xnge = new ExchangeGremlin();
 
   val bijstortLijst = List(BSV.Ingedient(product1, 101.101), BSV.Ingedient(product2, 202.202))
   xnge.put(BSV.BijstortLijst, bijstortLijst);

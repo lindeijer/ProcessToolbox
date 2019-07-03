@@ -17,14 +17,15 @@ case class Process private (val top: Step, i: Int) extends Step(i) {
 
   override def step(xnge: Exchange) = {}
 
-  override def process(xnge: Exchange) = {
+  override def process(xnge: Exchange): Exchange = {
     xnge.listeners ++= xngeListeners
     listeners.foreach(_.apply(new StepStarted(this, Instant.now)))
     top.listeners += notifySubStepChanged
-    top.process(xnge)
+    val xngeFromTopStep = top.process(xnge)
     top.listeners -= notifySubStepChanged
     listeners.foreach(_.apply(new StepFinished(this, Instant.now)))
     xnge.listeners --= xngeListeners
+    return xngeFromTopStep
   }
 
   val xngeListeners: ListBuffer[ExchangeEvent => Unit] = ListBuffer.empty
@@ -53,15 +54,7 @@ case class StepConcurrent private (a: Step, b: Step, i: Int) extends Step(i) {
 
   override def step(xnge: Exchange) = {}
 
-  override def process(xnge: Exchange) = {
-    // concurrent implies any interleaving allowed, including sequential which is what we do for now.
-    a.listeners += notifySubStepChanged
-    a.process(xnge)
-    a.listeners -= notifySubStepChanged
-    b.listeners += notifySubStepChanged
-    b.process(xnge);
-    b.listeners -= notifySubStepChanged
-  }
+  override def process(xnge: Exchange): Exchange = ???
 
 }
 
@@ -76,13 +69,14 @@ case class StepSequential private (val a: Step, val b: Step, i: Int) extends Ste
 
   override def step(xnge: Exchange) = {}
 
-  override def process(xnge: Exchange) = {
+  override def process(xnge: Exchange): Exchange = {
     a.listeners += notifySubStepChanged
-    a.process(xnge)
+    val xngeFromA = a.process(xnge)
     a.listeners -= notifySubStepChanged
     b.listeners += notifySubStepChanged
-    b.process(xnge);
+    val xngeFromB = b.process(xngeFromA);
     b.listeners -= notifySubStepChanged
+    return xngeFromB
   }
 
 }
@@ -93,11 +87,7 @@ class StepChoice private (steps: Vector[Step], chooser: String, i: Int) extends 
 
   def split(): Step = ???
 
-  override def step(xnge: Exchange) = {
-    val chosenIndex = xnge.get[Int](chooser)
-    val chosenStep = steps(chosenIndex)
-    chosenStep.process(xnge)
-  }
+  override def step(xnge: Exchange) = ???
 
 }
 
@@ -112,7 +102,8 @@ case class StepSplit private (splitListKey: Any, splitItemKey: Any, splitItemRes
   val items2StepPromise = Promise[Map[Any, Step]]()
   val items2StepFuture = items2StepPromise.future
 
-  override def process(xnge: Exchange) = {
+  override def process(xnge: Exchange): Exchange = {
+    val xnge4this = xnge.step(this);
     listeners.foreach(_.apply(new StepStarted(this, Instant.now)))
     val splitList = xnge.get[List[Any]](splitListKey)
     val items2Step = splitList.map {
@@ -122,15 +113,17 @@ case class StepSplit private (splitListKey: Any, splitItemKey: Any, splitItemRes
     val splitResults = new HashMap[Any, Any]
     for (splitItem <- splitList) {
       val stepForItem = items2Step.get(splitItem).get
-      xnge.put(splitItemKey, splitItem)
+      val xnge4splitStep = xnge4this.step(stepForItem)
+      xnge4splitStep.put(splitItemKey, splitItem)
       stepForItem.listeners += notifySubStepChanged
-      stepForItem.process(xnge);
+      val xnge4splitStepResult = stepForItem.process(xnge4splitStep);
       stepForItem.listeners -= notifySubStepChanged
-      val splitItemResult = xnge.get[Any](splitItemResultKey)
+      val splitItemResult = xnge4splitStepResult.get[Any](splitItemResultKey)
       splitResults.put(splitItem, splitItemResult)
     }
-    xnge.put(splitResultsKey, splitResults.toMap)
+    xnge4this.put(splitResultsKey, splitResults.toMap)
     listeners.foreach(_.apply(new StepFinished(this, Instant.now)))
+    return xnge4this
   }
 
 }
@@ -180,10 +173,12 @@ abstract class Step(val index: Int) {
   /**
    * Execute the step. User extensions of this class should not override this method.
    */
-  def process(xnge: Exchange) = {
+  def process(xnge: Exchange): Exchange = {
+    val xnge4this = xnge.step(this)
     listeners.foreach(_.apply(new StepStarted(this, Instant.now)))
-    step(xnge)
+    step(xnge4this) // the xnge is modified as a side effect.
     listeners.foreach(_.apply(new StepFinished(this, Instant.now)))
+    return xnge4this;
   }
 
   val listeners: ListBuffer[StepEvent => Unit] = ListBuffer.empty
@@ -216,98 +211,3 @@ object Step extends StepFunction(null) {
 
 }
 
-class ExchangeEvent {}
-case class ExchangePut(key: Any, value: Any) extends ExchangeEvent {}
-case class ExchangeRemove(key: Any) extends ExchangeEvent {}
-case class ExchangeRename(oldKey: Any, newKey: Any) extends ExchangeEvent {}
-
-class Exchange {
-
-  private val properties = new HashMap[Any, Any]
-
-  def get[T](key: Any): T = {
-    if (key == null) {
-      throw new IllegalArgumentException("The key may not be null.");
-    }
-    properties.get(key).getOrElse(null).asInstanceOf[T];
-  }
-
-  def rename(oldKey: Any, newKey: Any) = {
-    if (oldKey == null) {
-      if (newKey == null) {
-        throw new IllegalArgumentException("Neither old-key nor new-key may be null, and both are null.");
-      } else {
-        throw new IllegalArgumentException("The old-key may not be null. Attempted with new-key=" + newKey);
-      }
-    }
-    if (newKey == null) {
-      throw new IllegalArgumentException("The new-key not be null. Allempted with old-key=" + oldKey);
-    }
-    listeners.foreach(_.apply(ExchangeRename(oldKey, newKey)))
-    properties.put(newKey, properties.get(oldKey));
-    properties.remove(oldKey)
-  }
-
-  def put(key: Any, value: Any) = {
-    if (key == null) {
-      if (value == null) {
-        throw new IllegalArgumentException("Neither value nor key may be null, and both are null.");
-      } else {
-        throw new IllegalArgumentException("The key may not be null. Allempted use with value=" + value);
-      }
-    }
-    if (value == null) {
-      throw new IllegalArgumentException("The value may not be null. key=" + key);
-    }
-    listeners.foreach(_.apply(ExchangePut(key, value)))
-    properties.put(key, value);
-  }
-
-  def remove(key: Any) = {
-    if (key == null) {
-      throw new IllegalArgumentException("The key may not be null.");
-    }
-    if (properties.contains(key)) {
-      listeners.foreach(_.apply(ExchangeRemove(key)))
-      properties.remove(key);
-    }
-  }
-
-  def containsKey(key: Any) = {
-    if (key == null) {
-      throw new IllegalArgumentException("The key may not be null.");
-    }
-    properties.contains(key);
-  }
-
-  val listeners: ListBuffer[ExchangeEvent => Unit] = ListBuffer.empty
-
-  // ----
-
-  private val stash = new HashMap[Any, Any]
-
-  def stash_get[T](key: Any): T = {
-    if (key == null) {
-      throw new IllegalArgumentException("The stash-key may not be null.");
-    }
-    stash.get(key).asInstanceOf[T];
-  }
-
-  def stash_rename(oldKey: Any, newKey: Any) = {
-    stash.put(newKey, properties.get(oldKey));
-    stash.remove(oldKey)
-  }
-
-  def stash_put(key: Any, value: Any) = {
-    stash.put(key, value);
-  }
-
-  def stash_remove(key: Any) = {
-    stash.remove(key);
-  }
-
-  def stash_containsKey(key: Any) = {
-    stash.contains(key);
-  }
-
-}

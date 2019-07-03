@@ -23,7 +23,7 @@ object TransferItemsBetweenPallets extends (Exchange => Unit) {
 
 // ----
 
-trait PalletSelector extends Selector {
+trait PalletSelector extends Selector[Pallet] {
   //def selectThePalletWithId(palletId: String): Pallet
   //def selectAnyPalletWithProduct(product: Product): Pallet
 }
@@ -81,19 +81,25 @@ object PalletScanner {
 // =====================================
 
 import java.util.concurrent._
+import gremlin.scala.label
 
-class PalletScannerManiac(location: Int) extends PalletSelector {
+case class PalletScannerManiac(location: Int) extends PalletSelector {
 
   val scanner = Scanner(location)
-  val ex = new ScheduledThreadPoolExecutor(1)
-  val task = new Runnable {
-    def run() = {
-      val selectedPallet = selectAnyPellet()
-      println("selectedPallet=" + selectedPallet)
-      listeners.foreach(_.apply(selectedPallet))
+
+  def init() = {
+    val ex = new ScheduledThreadPoolExecutor(1)
+    val task = new Runnable {
+      def run() = {
+        val selectedPallet = selectAnyPellet()
+        println("selectedPallet=" + selectedPallet)
+        listeners.foreach(_.apply(selectedPallet))
+      }
     }
+    val f = ex.scheduleAtFixedRate(task, 1, 5, TimeUnit.SECONDS)
   }
-  val f = ex.scheduleAtFixedRate(task, 1, 5, TimeUnit.SECONDS)
+
+  init()
 
   private def selectAnyPellet(): Pallet = {
     selectAnyPellet(scanner.scan())
@@ -108,13 +114,6 @@ class PalletScannerManiac(location: Int) extends PalletSelector {
     }
   }
 
-}
-
-object PalletScannerManiac {
-
-  def apply(location: Int) = {
-    new PalletScannerManiac(location)
-  }
 }
 
 ////////////////////////////////////////////////
@@ -145,3 +144,10 @@ object TransferProductBetweenVessels extends (Exchange => Unit) {
 object SrcVessel {}
 object DstVessel {}
 
+//////////////
+
+trait VesselSelector extends Selector[Vessel] {}
+
+case class VesselScannerLoser(location: Int) extends VesselSelector {
+
+}
