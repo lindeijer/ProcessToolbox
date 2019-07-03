@@ -33,8 +33,10 @@ import nl.dgl.ptb.dsl.SelectSource
 import nl.dgl.ptb.dsl.SelectFilter
 import nl.dgl.ptb.dsl.Selection
 import nl.dgl.logces.VesselSelectFiler
+import nl.dgl.ptb.dsl.Selector
+import nl.dgl.logces.VesselSelector
 
-class BijStortVoorbereiding extends Process({ //
+class BijStortVoorbereiding(implicit aPalletSelector: PalletSelector, aVesselSelector: VesselSelector) extends Process({ //
   Split(BSV.Bijstort, Process { //
     Step(xnge => {
       val product = xnge.get[BSV.Ingedient](BSV.Bijstort).product

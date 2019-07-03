@@ -6,16 +6,16 @@ import scala.util.{ Try, Success, Failure }
 import scala.concurrent.duration._
 import scala.collection.mutable.ListBuffer
 
-trait Selector {
+trait Selector[T] {
   val listeners: ListBuffer[Any => Unit] = ListBuffer.empty
 }
 
 object Selector
 object Selection
 
-case class StepSelect private (filter: SelectFilter[_], i: Int) extends Step(i) {
+case class StepSelect[T] private (filter: SelectFilter[T], i: Int)(implicit selector: Selector[T]) extends Step(i) {
 
-  def this(filter: SelectFilter[_]) = this(filter, StepConstructionHelper.counter.incrementAndGet())
+  def this(filter: SelectFilter[T])(implicit selector: Selector[T]) = this(filter, StepConstructionHelper.counter.incrementAndGet())
 
   def split: Step = {
     println("StepSelect.split: NOT CLONED filter=" + filter)
@@ -38,7 +38,6 @@ case class StepSelect private (filter: SelectFilter[_], i: Int) extends Step(i) 
         selectionPromise.success(selection)
       }
     }
-    val selector = xnge.get[Selector](Selector)
     selector.listeners += notifySelection
 
     // start listening to the selector. The UI may select as well.
@@ -57,7 +56,7 @@ case class StepSelect private (filter: SelectFilter[_], i: Int) extends Step(i) 
  * Sets Select(ion) on Exchange
  */
 object Select { // IU presents the list to select from, selector does it some other way
-  def apply(filter: SelectFilter[_]) = {
+  def apply[T](filter: SelectFilter[T])(implicit selector: Selector[T]) = {
     new StepSelect(filter)
   }
 }

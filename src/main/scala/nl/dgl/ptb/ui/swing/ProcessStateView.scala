@@ -93,7 +93,7 @@ class ProcessStateView(topProcess: Process) extends BoxPanel(Orientation.Vertica
 
   def newStepViewContents(step: Step): Component = {
     step match {
-      case StepSelect(_, index) => newStepSelectViewContents(step.asInstanceOf[StepSelect])
+      case StepSelect(_, index) => newStepSelectViewContents(step.asInstanceOf[StepSelect[_]])
       case _                    => new Label("[[" + step.toString() + "]]")
     }
 
@@ -102,7 +102,7 @@ class ProcessStateView(topProcess: Process) extends BoxPanel(Orientation.Vertica
   import scala.concurrent.duration._
   import scala.util.{ Try, Success, Failure }
 
-  def newStepSelectViewContents(stepSelect: StepSelect): Component = {
+  def newStepSelectViewContents(stepSelect: StepSelect[_]): Component = {
     Try(Await.result(stepSelect.candidatesFuture, 1 second)) match {
       case Success(candidates) => {
         val stepSelectComboBox = new ComboBox(candidates);

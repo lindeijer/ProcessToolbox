@@ -174,10 +174,11 @@ abstract class Step(val index: Int) {
    * Execute the step. User extensions of this class should not override this method.
    */
   def process(xnge: Exchange): Exchange = {
+    val xnge4this = xnge.step(this)
     listeners.foreach(_.apply(new StepStarted(this, Instant.now)))
-    step(xnge) // the xnge is modified as a side effect.
+    step(xnge4this) // the xnge is modified as a side effect.
     listeners.foreach(_.apply(new StepFinished(this, Instant.now)))
-    return xnge;
+    return xnge4this;
   }
 
   val listeners: ListBuffer[StepEvent => Unit] = ListBuffer.empty

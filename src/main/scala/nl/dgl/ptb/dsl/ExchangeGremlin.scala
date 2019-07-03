@@ -17,55 +17,77 @@ import scala.collection.mutable.HashMap
 import scala.concurrent.Promise
 import java.util.concurrent.atomic.AtomicInteger
 
-object XXX {
-
-  val g: ScalaGraph = {
-    val graph = TinkerGraph.open
-    graph.io(gryo()).readGraph("movie-lens.kryo")
-    graph.asScala
-  }
-
-  println("g=" + XXX.g);
-  println("g.V.count.head=" + XXX.g.V.count.head);
-  println("g.E.count.head=" + XXX.g.E.count.head);
-
-  val person = Key[String]("person");
-  val name = Key[String]("name");
-  val weight = Key[String]("weight");
-
-  //val v1 = XXX.g.addV("person").property(name, "marko") // .next()
-  //val v2 = XXX.g.addV("person").property(name, "stephen") // .next()
-  //val e1 = XXX.g.V(v1).addE("knows").to(v2) // .property(weight, 0.75) // .iterate()
-
-}
-
 import gremlin.scala._
 import org.apache.tinkerpop.gremlin.tinkergraph.structure.TinkerGraph
 import org.apache.tinkerpop.gremlin.structure.Direction
-
-@label("my_custom_label")
-case class Example(longValue: Long, stringValue: Option[String])
-// case class Person(name: String, friends: Seq[String])
+import org.apache.tinkerpop.shaded.kryo.Kryo
+import java.io.OutputStream
+import org.apache.tinkerpop.gremlin.structure.io.gryo.GryoMapper
+import java.io.FileOutputStream
+import java.io.File
+import org.apache.tinkerpop.gremlin.structure.io.gryo.GryoWriter
+import org.apache.tinkerpop.gremlin.structure.io.IoCore
+import org.apache.tinkerpop.gremlin.tinkergraph.structure.TinkerFactory
 
 @label("keyandvalue")
 case class KeyAndValue(key: Option[Any], value: Option[Any])
 
-object Main extends App {
-  implicit val graph = TinkerGraph.open.asScala
-  val example = Example(Long.MaxValue, Some("optional value"))
-  val v = graph + example
-  v.toCC[Example] // equal to `example`, but with `vertex` set
-
-  // find all vertices with the label of the case class `Example`
-  graph.V.hasLabel[Example]
-
-  // modify the vertex like a case class
-  v.updateAs[Example](_.copy(longValue = 0L))
-}
-
 object ExchangeGremlin {
 
-  val graph = TinkerGraph.open.asScala
+  val tinkerGraph = TinkerGraph.open
+
+  val graph: ScalaGraph = {
+    if (java.nio.file.Files.isRegularFile(java.nio.file.Paths.get("ExchangeGremlin.kryo"))) {
+      println("data EXISTS")
+      tinkerGraph.io(gryo()).readGraph("ExchangeGremlin.kryo")
+    } else {
+      println("data NEW")
+    }
+    tinkerGraph.asScala
+  }
+
+  def commit() = {
+
+    println("data COMITTED")
+
+    val file = new File("ExchangeGremlin.kryo");
+    val fos = new FileOutputStream(file);
+    val gryoMapperBuilder = GryoMapper.build()
+    val gryoMapper = gryoMapperBuilder //
+      .addCustom(Class.forName("scala.collection.immutable.$colon$colon")) //
+      .addCustom(Class.forName("scala.collection.immutable.Nil$")) //
+      .addCustom(Class.forName("scala.collection.mutable.ListBuffer")) //
+      .addCustom(classOf[nl.dgl.bsv.BSV$Ingedient]) //
+      .addCustom(classOf[nl.dgl.logces.Product]) //
+      .addCustom(classOf[nl.dgl.logces.Product$]) //
+      .addCustom(classOf[nl.dgl.logces.TransferProductBetweenVessels$AmountMarginPercent$]) //
+      .addCustom(classOf[nl.dgl.logces.Pallet]) //
+      .addCustom(Class.forName("nl.dgl.logces.Pallet$")) //
+      .addCustom(classOf[nl.dgl.logces.Article]) //
+      .addCustom(classOf[nl.dgl.ptb.dsl.Selection$]) //
+      .addCustom(classOf[nl.dgl.logces.TransferItemsBetweenPallets$Count$]) //
+      .addCustom(Class.forName("nl.dgl.logces.SrcPallet$")) //
+      .addCustom(Class.forName("nl.dgl.logces.DstPallet$")) //
+      .addCustom(classOf[nl.dgl.logces.VesselPure]) //
+      .addCustom(classOf[nl.dgl.logces.Lot]) //
+      .addCustom(Class.forName("nl.dgl.logces.SrcVessel$")) //
+      .addCustom(Class.forName("nl.dgl.logces.DstVessel$")) //
+      .addCustom(classOf[nl.dgl.logces.VesselMixed]) //
+      .addCustom(Class.forName("scala.collection.mutable.HashMap")) //
+      .addCustom(Class.forName("nl.dgl.logces.TransferProductBetweenVessels$AmountTarget$")) //
+      .addCustom(Class.forName("nl.dgl.logces.TransferProductBetweenVessels$AmountActual$")) //
+      .addCustom(Class.forName("scala.Tuple2$mcDD$sp")) //
+      .addCustom(Class.forName("scala.collection.immutable.Map$Map2")) //
+      .create
+    val writer = GryoWriter.build().mapper(gryoMapper).create()
+    writer.writeGraph(fos, tinkerGraph)
+
+    println("data COMITTED")
+
+  }
+
+  commit();
+
 }
 
 class ExchangeGremlin(step: Step, predecessor: Exchange) extends Exchange {
@@ -105,6 +127,7 @@ class ExchangeGremlin(step: Step, predecessor: Exchange) extends Exchange {
     println("put: step=" + step + ",key=" + key + ",value=" + value)
     val keyAndValue = graph + KeyAndValue(Option(key), Option(value))
     vertex4step --- "keyAndValue" --> keyAndValue
+    ExchangeGremlin.commit()
   }
 
   def remove(key: Any): Unit = ???
