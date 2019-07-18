@@ -65,11 +65,11 @@ object Select { // IU presents the list to select from, selector does it some ot
 }
 
 trait SelectSource[T] { // Pallets object
-  def Where(xngeKey: Any): SelectFilter[T]
+  def Where(xngeKey: String): SelectFilter[T]
   def candidates(xnge: Exchange): List[T]
 }
 
 trait SelectFilter[T] { // Palets instantce
-  def And(xngeKey: Any): SelectFilter[T]
+  def And(xngeKey: String): SelectFilter[T]
   def candidates(xnge: Exchange): List[T]
 }

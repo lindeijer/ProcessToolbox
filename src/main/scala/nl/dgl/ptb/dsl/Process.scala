@@ -200,6 +200,7 @@ abstract class Step(val index: Int) {
 
     if (xnge4this.getIsStepFinished()) {
       println("Step: isFinished! index=" + index)
+      listeners.foreach(_.apply(new StepFinished(this, Instant.now)))
       return xnge4this
     }
 

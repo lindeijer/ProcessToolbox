@@ -94,17 +94,17 @@ object Pallet {
   }
 }
 
-class PalletSelectFiler(source: SelectSource[Pallet], xngeKey: Any) extends SelectFilter[Pallet] with SelectSource[Pallet] {
+class PalletSelectFiler(source: SelectSource[Pallet], xngeKey: String) extends SelectFilter[Pallet] with SelectSource[Pallet] {
 
   // with SelectFilter
 
-  def And(xngeKey: Any): SelectFilter[Pallet] = {
+  def And(xngeKey: String): SelectFilter[Pallet] = {
     return new PalletSelectFiler(this, xngeKey)
   }
 
   // with SelectSource
 
-  def Where(xngeKey: Any): SelectFilter[Pallet] = {
+  def Where(xngeKey: String): SelectFilter[Pallet] = {
     return And(xngeKey)
   }
 
@@ -121,7 +121,7 @@ class PalletSelectFiler(source: SelectSource[Pallet], xngeKey: Any) extends Sele
 
 object Pallets extends SelectSource[Pallet] {
 
-  def Where(xngeKey: Any): SelectFilter[Pallet] = { new PalletSelectFiler(this, xngeKey) }
+  def Where(xngeKey: String): SelectFilter[Pallet] = { new PalletSelectFiler(this, xngeKey) }
   def candidates(xnge: Exchange): List[Pallet] = {
     // this is the root-select-source so there is no xnge-key-value to select by
     // so we want the current list of them all.
@@ -194,17 +194,17 @@ object Vessels {
 
 }
 
-class VesselSelectFiler(source: SelectSource[Vessel], xngeKey: Any) extends SelectFilter[Vessel] with SelectSource[Vessel] {
+class VesselSelectFiler(source: SelectSource[Vessel], xngeKey: String) extends SelectFilter[Vessel] with SelectSource[Vessel] {
 
   // with SelectFilter
 
-  def And(xngeKey: Any): SelectFilter[Vessel] = {
+  def And(xngeKey: String): SelectFilter[Vessel] = {
     return new VesselSelectFiler(this, xngeKey)
   }
 
   // with SelectSource
 
-  def Where(xngeKey: Any): SelectFilter[Vessel] = {
+  def Where(xngeKey: String): SelectFilter[Vessel] = {
     return And(xngeKey)
   }
 

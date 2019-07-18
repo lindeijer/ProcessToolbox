@@ -39,10 +39,10 @@ class BijStortVoorbereiding(implicit aPalletSelector: PalletSelector, aVesselSel
       val product = xnge.get[Ingedient](BSV.Bijstort).product
       xnge.put(LoGcEs.Product, product)
     }) ~>
-      Select(Pallets Where Product) ~>
+      Select(Pallets Where LoGcEs.Product) ~>
       Step(BsvSetupTransferIngredientFromAnyPalletToBsvPallet) ~> //
       Step(TransferItemsBetweenPallets) ~> //
-      Select(VitamineBakken Where Product) ~>
+      Select(VitamineBakken Where LoGcEs.Product) ~>
       Step(BsvSetupTransferIngredientFromAnyVesselToBsvVessel) ~>
       Step(TransferProductBetweenVessels) ~>
       Step(xnge => {
@@ -94,7 +94,7 @@ object BsvSetupTransferIngredientFromAnyVesselToBsvVessel extends (Exchange => U
   def apply(xnge: Exchange) = {
     val vesselWithProduct = xnge.get[Vessel](DSL.Selection)
     // compute amount of KG to transfer to new scoop bag
-    val product = xnge.get[Product](Product)
+    val product = xnge.get[Product](LoGcEs.Product)
     val bijstortAmount = xnge.get[Ingedient](BSV.Bijstort).amount
     val bijstortPallet = xnge.get[Pallet](LoGcEs.DstPallet)
     val bijstortScoopAmount = bijstortAmount - (bijstortPallet.totalArticleWeight_kg)
@@ -113,7 +113,7 @@ object BsvSetupTransferIngredientFromAnyVesselToBsvVessel extends (Exchange => U
 
 object VitamineBakken extends SelectSource[Vessel] {
 
-  def Where(xngeKey: Any): SelectFilter[Vessel] = { new VesselSelectFiler(this, xngeKey) }
+  def Where(xngeKey: String): SelectFilter[Vessel] = { new VesselSelectFiler(this, xngeKey) }
   def candidates(xnge: Exchange): List[Vessel] = {
     // this is the root-select-source so there is no xnge-key-value to select by
     // so we want the current list of them all.

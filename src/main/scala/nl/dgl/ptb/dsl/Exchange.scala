@@ -12,14 +12,14 @@ case class ExchangeRemove(key: Any) extends ExchangeEvent {}
 case class ExchangeRename(oldKey: Any, newKey: Any) extends ExchangeEvent {}
 
 trait Exchange {
-  def get[T](key: Any): T
+  def get[T](key: String): T
   def rename(oldKey: Any, newKey: Any)
   def put(key: String, value: Any)
   def remove(key: Any)
   def containsKey(key: Any): Boolean
   val listeners: ListBuffer[ExchangeEvent => Unit] = ListBuffer.empty
 
-  def getLocal[T](key: Any): Option[T]
+  // def getLocal[T](key: String): Option[T]
 
   def step(nextStepIndex: Int): Exchange
   def getStepIndex(): Int
@@ -38,13 +38,9 @@ class ExchangeHashMap extends Exchange {
   def getIsStepFinished() = false
   def setStepIsFinished() = {}
 
-  def getLocal[T](key: Any): Option[T] = {
-    get(key)
-  }
-
   private val properties = new HashMap[Any, Any]
 
-  def get[T](key: Any): T = {
+  def get[T](key: String): T = {
     if (key == null) {
       throw new IllegalArgumentException("The key may not be null.");
     }

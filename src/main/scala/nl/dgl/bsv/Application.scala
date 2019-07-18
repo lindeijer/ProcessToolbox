@@ -28,7 +28,7 @@ import nl.dgl.logces.LoGcEs
 
 object MES_4C_LIENT extends Frame with App {
 
-  Log.TRACE();
+  // Log.TRACE();
 
   title = "BijStortVoorbereiding"
 

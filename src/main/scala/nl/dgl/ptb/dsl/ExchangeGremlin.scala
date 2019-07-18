@@ -287,25 +287,26 @@ class ExchangeGremlin private (stepIndex: Int, xngePrev: Exchange) extends Excha
 
   def containsKey(key: Any): Boolean = ???
 
-  override def getLocal[T](key: Any): Option[T] = {
-    println("XNGE getLocal: step.index=" + stepIndex + ",key=" + key + ",vertex4step=" + vertex4step)
+  def getLocal[T](key: String): Option[T] = {
+    // println("XNGE getLocal: step.index=" + stepIndex + ",key=" + key + ",vertex4step=" + vertex4step)
     val kAvs = graph.traversal.V(vertex4step).out("keyAndValue").toList()
-    println("XNGE getLocal: step.index=" + stepIndex + ",key=" + key + ",kAvs=" + kAvs)
+    // println("XNGE getLocal: step.index=" + stepIndex + ",key=" + key + ",kAvs=" + kAvs)
     kAvs.foreach(kAv => {
-      println("XNGE getLocal: step.index=" + stepIndex + ",kAv=" + kAv)
+      // println("XNGE getLocal: step.index=" + stepIndex + ",kAv=" + kAv)
       if (kAv.toCC[KeyAndValue].key.get.equals(key)) {
         val value = kAv.toCC[KeyAndValue].value.get
-        println("XNGE getLocal: step.index=" + stepIndex + ",key=" + key + ",value=" + value)
+        // println("XNGE getLocal: step.index=" + stepIndex + ",key=" + key + ",value=" + value)
         return Some(value.asInstanceOf[T])
       }
     })
-    println("XNGE getLocal: step.index=" + stepIndex + ",key=" + key + ",value=null")
+    // println("XNGE getLocal: step.index=" + stepIndex + ",key=" + key + ",value=null")
     return None
   }
 
-  def get[T](key: Any): T = {
-    println("XNGE get: step.index=" + stepIndex + ",key=" + key + ",value=...")
-    getLocal(key).getOrElse(xngePrev.get[T](key))
+  def get[T](key: String): T = {
+    val value = getLocal[T](key).getOrElse(xngePrev.get[T](key))
+    println("XNGE get: step.index=" + stepIndex + ",key=" + key + ",value=" + value)
+    return value
   }
 
   override def put(key: String, value: Any) = {
@@ -315,8 +316,8 @@ class ExchangeGremlin private (stepIndex: Int, xngePrev: Exchange) extends Excha
     val keyAndValue = graph + KeyAndValue(Option(key), Option(value))
     vertex4step --- "keyAndValue" --> keyAndValue
     ExchangeGremlin.commit();
-    println("XNGE put check: get value=...")
-    println("XNGE put check: get value=" + get(key))
+    // println("XNGE put check: get value=...")
+    // println("XNGE put check: get value=" + get(key))
   }
 
   def remove(key: Any): Unit = ???
