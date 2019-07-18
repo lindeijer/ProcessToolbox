@@ -5,6 +5,7 @@ import java.time.Instant
 import scala.collection.mutable.HashMap
 import scala.concurrent.Promise
 import java.util.concurrent.atomic.AtomicInteger
+import gremlin.scala.label
 
 case class Process private (val top: Step, i: Int) extends Step(i) {
 
@@ -18,12 +19,23 @@ case class Process private (val top: Step, i: Int) extends Step(i) {
   override def step(xnge: Exchange) = {}
 
   override def process(xnge: Exchange): Exchange = {
+
+    val xnge4this = xnge.step(this.index)
+
+    if (xnge4this.getIsStepFinished()) {
+      println("Process: isFinished! index=" + index)
+      return xnge4this
+    }
+
     xnge.listeners ++= xngeListeners
     listeners.foreach(_.apply(new StepStarted(this, Instant.now)))
     top.listeners += notifySubStepChanged
-    val xngeFromTopStep = top.process(xnge)
+    val xngeFromTopStep = top.process(xnge4this)
     top.listeners -= notifySubStepChanged
     listeners.foreach(_.apply(new StepFinished(this, Instant.now)))
+
+    xnge4this.setStepIsFinished()
+
     xnge.listeners --= xngeListeners
     return xngeFromTopStep
   }
@@ -91,9 +103,9 @@ class StepChoice private (steps: Vector[Step], chooser: String, i: Int) extends 
 
 }
 
-case class StepSplit private (splitListKey: Any, splitItemKey: Any, splitItemResultKey: Any, splitResultsKey: Any, stepToSplit: Step, i: Int) extends Step(i) {
+case class StepSplit private (splitListKey: String, splitItemKey: String, splitItemResultKey: String, splitResultsKey: String, stepToSplit: Step, i: Int) extends Step(i) {
 
-  def this(splitListKey: Any, splitItemKey: Any, splitItemResultKey: Any, splitResultsKey: Any, stepToSplit: Step) = this(splitListKey, splitItemKey, splitItemResultKey, splitResultsKey, stepToSplit, StepConstructionHelper.counter.getAndIncrement)
+  def this(splitListKey: String, splitItemKey: String, splitItemResultKey: String, splitResultsKey: String, stepToSplit: Step) = this(splitListKey, splitItemKey, splitItemResultKey, splitResultsKey, stepToSplit, StepConstructionHelper.counter.getAndIncrement)
 
   def split(): Step = ???
 
@@ -103,7 +115,13 @@ case class StepSplit private (splitListKey: Any, splitItemKey: Any, splitItemRes
   val items2StepFuture = items2StepPromise.future
 
   override def process(xnge: Exchange): Exchange = {
-    val xnge4this = xnge.step(this);
+    val xnge4this = xnge.step(this.index);
+
+    if (xnge4this.getIsStepFinished()) {
+      println("StepSplit: isFinished! index=" + index)
+      return xnge4this
+    }
+
     listeners.foreach(_.apply(new StepStarted(this, Instant.now)))
     val splitList = xnge.get[List[Any]](splitListKey)
     val items2Step = splitList.map {
@@ -113,7 +131,7 @@ case class StepSplit private (splitListKey: Any, splitItemKey: Any, splitItemRes
     val splitResults = new HashMap[Any, Any]
     for (splitItem <- splitList) {
       val stepForItem = items2Step.get(splitItem).get
-      val xnge4splitStep = xnge4this.step(stepForItem)
+      val xnge4splitStep = xnge4this.step(stepForItem.index)
       xnge4splitStep.put(splitItemKey, splitItem)
       stepForItem.listeners += notifySubStepChanged
       val xnge4splitStepResult = stepForItem.process(xnge4splitStep);
@@ -123,6 +141,9 @@ case class StepSplit private (splitListKey: Any, splitItemKey: Any, splitItemRes
     }
     xnge4this.put(splitResultsKey, splitResults.toMap)
     listeners.foreach(_.apply(new StepFinished(this, Instant.now)))
+
+    xnge4this.setStepIsFinished()
+
     return xnge4this
   }
 
@@ -130,7 +151,7 @@ case class StepSplit private (splitListKey: Any, splitItemKey: Any, splitItemRes
 
 object Split {
 
-  def apply(splitListKey: Any, splitItemKey: Any, splitItemResultKey: Any, splitResultsKey: Any, step: Step): StepSplit = {
+  def apply(splitListKey: String, splitItemKey: String, splitItemResultKey: String, splitResultsKey: String, step: Step): StepSplit = {
     return new StepSplit(splitListKey, splitItemKey, splitItemResultKey, splitResultsKey, step)
   }
 
@@ -153,6 +174,7 @@ object StepConstructionHelper {
   val counter = new AtomicInteger(0)
 }
 
+@label("step")
 abstract class Step(val index: Int) {
 
   def split(): Step
@@ -173,11 +195,20 @@ abstract class Step(val index: Int) {
   /**
    * Execute the step. User extensions of this class should not override this method.
    */
-  def process(xnge: Exchange): Exchange = {
-    val xnge4this = xnge.step(this)
+  def process(xnge: Exchange): Exchange = { 
+    val xnge4this = xnge.step(this.index)
+
+    if (xnge4this.getIsStepFinished()) {
+      println("Step: isFinished! index=" + index)
+      return xnge4this
+    }
+
     listeners.foreach(_.apply(new StepStarted(this, Instant.now)))
     step(xnge4this) // the xnge is modified as a side effect.
     listeners.foreach(_.apply(new StepFinished(this, Instant.now)))
+
+    xnge4this.setStepIsFinished();
+
     return xnge4this;
   }
 

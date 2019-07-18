@@ -1,45 +1,214 @@
 package nl.dgl.ptb.dsl
 
-import gremlin.scala._
-import org.apache.tinkerpop.gremlin.structure.io.IoCore.gryo
-import org.apache.tinkerpop.gremlin.tinkergraph.structure.TinkerGraph
-import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.__
-import org.apache.tinkerpop.gremlin.process.traversal.{ Order, P, Scope }
-import java.lang.{ Long ⇒ JLong, Double ⇒ JDouble }
-import java.util.{ Map ⇒ JMap }
-import scala.collection.JavaConversions._
-import org.scalatest.{ Matchers, WordSpec }
-import shapeless.HNil
-
-import scala.collection.mutable.ListBuffer
-import java.time.Instant
-import scala.collection.mutable.HashMap
-import scala.concurrent.Promise
-import java.util.concurrent.atomic.AtomicInteger
-
-import gremlin.scala._
-import org.apache.tinkerpop.gremlin.tinkergraph.structure.TinkerGraph
-import org.apache.tinkerpop.gremlin.structure.Direction
-import org.apache.tinkerpop.shaded.kryo.Kryo
-import java.io.OutputStream
-import org.apache.tinkerpop.gremlin.structure.io.gryo.GryoMapper
-import java.io.FileOutputStream
 import java.io.File
+import java.io.FileInputStream
+import java.io.FileOutputStream
+
+import org.apache.tinkerpop.gremlin.structure.io.IoCore.gryo
+import org.apache.tinkerpop.gremlin.structure.io.gryo.GryoMapper
+import org.apache.tinkerpop.gremlin.structure.io.gryo.GryoReader
 import org.apache.tinkerpop.gremlin.structure.io.gryo.GryoWriter
-import org.apache.tinkerpop.gremlin.structure.io.IoCore
-import org.apache.tinkerpop.gremlin.tinkergraph.structure.TinkerFactory
+import org.apache.tinkerpop.gremlin.tinkergraph.structure.TinkerGraph
+import org.apache.tinkerpop.shaded.kryo.Serializer
+import org.apache.tinkerpop.shaded.kryo.io.Input
+import org.apache.tinkerpop.shaded.kryo.io.Output
+
+import gremlin.scala.GraphAsScala
+import gremlin.scala.ScalaGraph
+import gremlin.scala.Vertex
+import gremlin.scala.asScalaVertex
+import gremlin.scala.label
+import nl.dgl.bsv.Ingedient
+import nl.dgl.logces.Article
+import nl.dgl.logces.Lot
+import nl.dgl.logces.Pallet
+import nl.dgl.logces.Product
+import nl.dgl.logces.VesselMixed
+import nl.dgl.logces.VesselPure
+import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.GraphTraversalSource
+import org.apache.tinkerpop.gremlin.structure.io.AbstractIoRegistry
+import org.apache.tinkerpop.gremlin.structure.io.gryo.GryoIo
+import org.apache.tinkerpop.gremlin.structure.Graph
+import org.apache.tinkerpop.shaded.kryo.Kryo
+import nl.dgl.tinkerpop.shaded.kryo.serializers.GryoScalaCollectionSerializer
 
 @label("keyandvalue")
 case class KeyAndValue(key: Option[Any], value: Option[Any])
 
-object ExchangeGremlin {
+////////////////////////////////////////////////////
+
+/////////////////////////////////////////////
+
+class ProductSerializer extends Serializer[Product] {
+  def write(kryo: org.apache.tinkerpop.shaded.kryo.Kryo, output: Output, //
+            product: nl.dgl.logces.Product): Unit = //
+    {
+      output.writeString(product.code)
+    }
+
+  def read(kryo: org.apache.tinkerpop.shaded.kryo.Kryo, input: Input, //
+           clazz: Class[nl.dgl.logces.Product]): nl.dgl.logces.Product = //
+    {
+      ExchangeGremlinGyro.registerStuff(kryo)
+
+      return Product(input.readString())
+    }
+}
+
+class ArticleSerializer extends Serializer[Article] {
+
+  def write(kryo: org.apache.tinkerpop.shaded.kryo.Kryo, output: Output, //
+            article: nl.dgl.logces.Article): Unit = //
+    {
+      output.writeString(article.code)
+      kryo.writeObject(output, article.product)
+      output.writeDouble(article.weight_kg)
+    }
+
+  def read(kryo: org.apache.tinkerpop.shaded.kryo.Kryo, input: Input, //
+           clazz: Class[nl.dgl.logces.Article]): nl.dgl.logces.Article = //
+    {
+      return Article(input.readString(), kryo.readObject[Product](input, classOf[Product]), input.readDouble())
+    }
+
+}
+
+class PalletSerializer extends Serializer[Pallet] {
+
+  def write(kryo: org.apache.tinkerpop.shaded.kryo.Kryo, output: Output, //
+            pallet: nl.dgl.logces.Pallet): Unit = //
+    {
+      output.writeString(pallet.id)
+      kryo.writeObject(output, pallet.article)
+    }
+
+  def read(kryo: org.apache.tinkerpop.shaded.kryo.Kryo, input: Input, //
+           clazz: Class[nl.dgl.logces.Pallet]): nl.dgl.logces.Pallet = //
+    {
+      return Pallet(input.readString(), kryo.readObject[Article](input, classOf[Article]))
+    }
+
+}
+
+class IngredientSerializer extends Serializer[Ingedient] {
+
+  def write(kryo: org.apache.tinkerpop.shaded.kryo.Kryo, output: Output, //
+            ingedient: nl.dgl.bsv.Ingedient): Unit = //
+    {
+      kryo.writeObject(output, ingedient.product)
+      output.writeDouble(ingedient.amount)
+    }
+
+  def read(kryo: org.apache.tinkerpop.shaded.kryo.Kryo, input: Input, //
+           clazz: Class[nl.dgl.bsv.Ingedient]): nl.dgl.bsv.Ingedient = //
+    {
+      return Ingedient(kryo.readObject[Product](input, classOf[Product]), input.readDouble())
+    }
+
+}
+
+// ================
+
+class MyGraphIoRegistry extends AbstractIoRegistry {
+
+  //def register(ioClass: final Class<? extends Io> ioClass, final Class clazz, final Object serializer) {
+  //      if (!registeredSerializers.containsKey(ioClass))
+  //          registeredSerializers.put(ioClass, new ArrayList<>());
+  //      registeredSerializers.get(ioClass).add(Pair.with(clazz, serializer));
+  //  }
+
+  //register(GraphSONIo.class, null, new MyGraphSimpleModule());
+  register(classOf[GryoIo], classOf[Product], new ProductSerializer());
+
+}
+
+// ================
+
+object ExchangeGremlinGyro {
 
   val tinkerGraph = TinkerGraph.open
+
+  val bbbbbb = GryoIo.build();
+
+  // tinkerGraph.io(x$1)
+
+  //  public <I extends Io> I io(final Io.Builder<I> builder) {
+  //    return (I) builder.graph(this).registry(myGraphIoRegistry).create();
+  //  }}
+
+  def registerStuff(kryo: Kryo) = {
+    //    // Serialization of Scala enumerations
+    //    kryo.addDefaultSerializer(classOf[scala.Enumeration#Value], classOf[EnumerationSerializer])
+    //    kryo.register(Class.forName("scala.Enumeration$Val"))
+    //    kryo.register(classOf[scala.Enumeration#Value])
+    //
+    //    // Serialization of Scala maps like Trees, etc
+    //    kryo.addDefaultSerializer(classOf[scala.collection.Map[_, _]], classOf[ScalaImmutableMapSerializer]) // ScalaImmutableMapSerializer
+    //    kryo.addDefaultSerializer(classOf[scala.collection.generic.MapFactory[scala.collection.Map]], classOf[ScalaImmutableMapSerializer])
+    //
+    //    // Serialization of Scala sets
+    //    kryo.addDefaultSerializer(classOf[scala.collection.Set[_]], classOf[ScalaImmutableSetSerializer])
+    //    kryo.addDefaultSerializer(classOf[scala.collection.generic.SetFactory[scala.collection.Set]], classOf[ScalaImmutableSetSerializer])
+    //
+    //    // Serialization of all Traversable Scala collections like Lists, Vectors, etc
+    //    kryo.addDefaultSerializer(classOf[scala.collection.Traversable[_]], classOf[ScalaCollectionSerializer])
+    //
+    //    kryo.register(classOf[scala.collection.immutable.$colon$colon[_]], 40)
+    //    kryo.addDefaultSerializer(classOf[scala.Enumeration#Value], classOf[EnumerationSerializer])
+    //    kryo.addDefaultSerializer(classOf[scala.collection.immutable.Set[_]], classOf[ScalaImmutableSetSerializer])
+    //    kryo.addDefaultSerializer(classOf[scala.collection.generic.SetFactory[scala.collection.Set]], classOf[ScalaImmutableSetSerializer])
+
+  }
+
+  val gryoMapper = {
+
+    val registry = new MyGraphIoRegistry()
+
+    //private final Kryo kryo;
+    //private final Map<GraphFilter, StarGraphGryoSerializer> graphFilterCache = new HashMap<>();
+    //private final long batchSize;
+    //private GryoReader(final long batchSize, final Mapper<Kryo> gryoMapper) {
+    //    this.kryo = gryoMapper.createMapper();
+    //    this.batchSize = batchSize;
+
+    // val kyro0 = new GryoMapper().createMapper()
+
+    val resultGryoMapper = GryoMapper.build()
+      .addRegistry(registry)
+      .addCustom(Class.forName("scala.collection.immutable.$colon$colon"), new GryoScalaCollectionSerializer) // , new EnumerationSerializer) //
+      // kryo.addDefaultSerializer(classOf[scala.Enumeration#Value], classOf[EnumerationSerializer])
+      // $colon$colon is actually '::' which is the class for a list with a head and a tail.
+
+      .addCustom(Class.forName("scala.collection.immutable.Nil$")) //
+      .addCustom(Class.forName("scala.collection.mutable.ListBuffer")) //
+      .addCustom(Class.forName("scala.collection.mutable.HashMap")) //
+      .addCustom(Class.forName("scala.Tuple2$mcDD$sp")) //
+      .addCustom(Class.forName("scala.collection.immutable.Map$Map2")) //
+      // .addCustom(classOf[Pallet]) //
+      // .addCustom(classOf[Article]) //
+      //.addCustom(classOf[Product], new ProductSerializer()) //
+      //.addCustom(classOf[nl.dgl.bsv.BsvList]) //
+      .addCustom(classOf[Ingedient], new IngredientSerializer()) //
+      .addCustom(classOf[Pallet], new PalletSerializer()) //
+      .addCustom(classOf[Article], new ArticleSerializer()) //
+      .addCustom(classOf[VesselPure]) //
+      .addCustom(classOf[Lot]) //
+      .addCustom(classOf[VesselMixed]) //
+      .create
+
+    val kryo = resultGryoMapper.createMapper()
+
+    resultGryoMapper
+
+  }
 
   val graph: ScalaGraph = {
     if (java.nio.file.Files.isRegularFile(java.nio.file.Paths.get("ExchangeGremlin.kryo"))) {
       println("data EXISTS")
-      tinkerGraph.io(gryo()).readGraph("ExchangeGremlin.kryo")
+      val file = new File("ExchangeGremlin.kryo");
+      val fis = new FileInputStream(file);
+      tinkerGraph.io(gryo()).reader().mapper(gryoMapper).create().readGraph(fis, tinkerGraph)
+      // create will call gryoMapper.createMapper() which returns the kryo instance
     } else {
       println("data NEW")
     }
@@ -47,87 +216,107 @@ object ExchangeGremlin {
   }
 
   def commit() = {
-
-    println("data COMITTED")
-
     val file = new File("ExchangeGremlin.kryo");
     val fos = new FileOutputStream(file);
-    val gryoMapperBuilder = GryoMapper.build()
-    val gryoMapper = gryoMapperBuilder //
-      .addCustom(Class.forName("scala.collection.immutable.$colon$colon")) //
-      .addCustom(Class.forName("scala.collection.immutable.Nil$")) //
-      .addCustom(Class.forName("scala.collection.mutable.ListBuffer")) //
-      .addCustom(classOf[nl.dgl.bsv.BSV$Ingedient]) //
-      .addCustom(classOf[nl.dgl.logces.Product]) //
-      .addCustom(classOf[nl.dgl.logces.Product$]) //
-      .addCustom(classOf[nl.dgl.logces.TransferProductBetweenVessels$AmountMarginPercent$]) //
-      .addCustom(classOf[nl.dgl.logces.Pallet]) //
-      .addCustom(Class.forName("nl.dgl.logces.Pallet$")) //
-      .addCustom(classOf[nl.dgl.logces.Article]) //
-      .addCustom(classOf[nl.dgl.ptb.dsl.Selection$]) //
-      .addCustom(classOf[nl.dgl.logces.TransferItemsBetweenPallets$Count$]) //
-      .addCustom(Class.forName("nl.dgl.logces.SrcPallet$")) //
-      .addCustom(Class.forName("nl.dgl.logces.DstPallet$")) //
-      .addCustom(classOf[nl.dgl.logces.VesselPure]) //
-      .addCustom(classOf[nl.dgl.logces.Lot]) //
-      .addCustom(Class.forName("nl.dgl.logces.SrcVessel$")) //
-      .addCustom(Class.forName("nl.dgl.logces.DstVessel$")) //
-      .addCustom(classOf[nl.dgl.logces.VesselMixed]) //
-      .addCustom(Class.forName("scala.collection.mutable.HashMap")) //
-      .addCustom(Class.forName("nl.dgl.logces.TransferProductBetweenVessels$AmountTarget$")) //
-      .addCustom(Class.forName("nl.dgl.logces.TransferProductBetweenVessels$AmountActual$")) //
-      .addCustom(Class.forName("scala.Tuple2$mcDD$sp")) //
-      .addCustom(Class.forName("scala.collection.immutable.Map$Map2")) //
-      .create
-    val writer = GryoWriter.build().mapper(gryoMapper).create()
-    writer.writeGraph(fos, tinkerGraph)
+    tinkerGraph.io(gryo()).writer().mapper(gryoMapper).create().writeGraph(fos, tinkerGraph);
+
+    val gryoIo = tinkerGraph.io(gryo()) //.mapper()
+    //gryoIo.mapper().addCustom(clazz, serializer)
 
     println("data COMITTED")
-
   }
 
   commit();
 
+  def reconstructStep(int: Int): Vertex = {
+    graph.V(int).fold().head().get(0)
+  }
+
 }
 
-class ExchangeGremlin(step: Step, predecessor: Exchange) extends Exchange {
+object ExchangeGremlin {
 
-  def this() = this(new StepFunction(xnge => xnge), new ExchangeHashMap())
+  val graph: ScalaGraph = ExchangeGremlinGyro.graph
 
-  override def step(step: Step): Exchange = {
-    return new ExchangeGremlin(step, this);
+  def commit() = ExchangeGremlinGyro.commit();
+
+  // def getRegisteredMarshallar(CCWithOption) { }
+
+}
+
+class ExchangeGremlin private (stepIndex: Int, xngePrev: Exchange) extends Exchange {
+
+  def this(stepIndex: Int) = this(stepIndex, new ExchangeHashMap()) // reconstruct process
+
+  def this() = this(StepConstructionHelper.counter.getAndIncrement()) // construct process
+
+  override def step(nextStepIndex: Int): Exchange = {
+    return new ExchangeGremlin(nextStepIndex, this);
+  }
+
+  def getStepIndex(): Int = stepIndex
+
+  override def getIsStepFinished(): Boolean = {
+    this.getLocal[Boolean]("isFinished").getOrElse(false)
+  }
+
+  override def setStepIsFinished() = {
+    this.put("isFinished", true)
   }
 
   import gremlin.scala._
-  import org.apache.tinkerpop.gremlin.tinkergraph.structure.TinkerGraph
 
   implicit val graph = ExchangeGremlin.graph;
 
-  val index = Key[Int]("index")
+  def yo = {
+    val g = graph.traversal;
+    val vertices = g.V().toList()
+  }
+
+  val indexKey = Key[Int]("index")
   val key = Key[Any]("key")
 
   val vertex4step = {
-    graph + ("step", index -> step.index)
+    val v = graph.traversal.V().has("step", indexKey, stepIndex)
+      .fold() // get or
+      .coalesce(_.unfold[Vertex](), _.addV("step").property(indexKey, stepIndex)) // create
+    val vertex = v.head();
+    println("XNGE vertex4step: index=" + stepIndex + ",i=" + vertex.id());
+    vertex
   }
 
   def containsKey(key: Any): Boolean = ???
-  def get[T](key: Any): T = {
-    println("get: step=" + step + ",key=" + key)
-    vertex4step.vertices(Direction.OUT, "keyAndValue").forEachRemaining(v => {
-      //println("get: step=" + step + ",key=" + key + ",v=" + v.toCC[KeyAndValue])
-      if (v.toCC[KeyAndValue].key.get.equals(key)) {
-        println("get: step=" + step + ",key=" + key + ",value=" + v.toCC[KeyAndValue].value.get)
-        return v.toCC[KeyAndValue].value.get.asInstanceOf[T]
+
+  override def getLocal[T](key: Any): Option[T] = {
+    println("XNGE getLocal: step.index=" + stepIndex + ",key=" + key + ",vertex4step=" + vertex4step)
+    val kAvs = graph.traversal.V(vertex4step).out("keyAndValue").toList()
+    println("XNGE getLocal: step.index=" + stepIndex + ",key=" + key + ",kAvs=" + kAvs)
+    kAvs.foreach(kAv => {
+      println("XNGE getLocal: step.index=" + stepIndex + ",kAv=" + kAv)
+      if (kAv.toCC[KeyAndValue].key.get.equals(key)) {
+        val value = kAv.toCC[KeyAndValue].value.get
+        println("XNGE getLocal: step.index=" + stepIndex + ",key=" + key + ",value=" + value)
+        return Some(value.asInstanceOf[T])
       }
     })
-    return predecessor.get(key)
+    println("XNGE getLocal: step.index=" + stepIndex + ",key=" + key + ",value=null")
+    return None
   }
 
-  def put(key: Any, value: Any) = {
-    println("put: step=" + step + ",key=" + key + ",value=" + value)
+  def get[T](key: Any): T = {
+    println("XNGE get: step.index=" + stepIndex + ",key=" + key + ",value=...")
+    getLocal(key).getOrElse(xngePrev.get[T](key))
+  }
+
+  override def put(key: String, value: Any) = {
+    println("XNGE put: step.index=" + stepIndex + ",key=" + key + ",value=" + value)
+    println("");
+    //  implicit val marshaller = ExchangeGremlin.getRegisteredMarshallar(CCWithOption)
     val keyAndValue = graph + KeyAndValue(Option(key), Option(value))
     vertex4step --- "keyAndValue" --> keyAndValue
-    ExchangeGremlin.commit()
+    ExchangeGremlin.commit();
+    println("XNGE put check: get value=...")
+    println("XNGE put check: get value=" + get(key))
   }
 
   def remove(key: Any): Unit = ???

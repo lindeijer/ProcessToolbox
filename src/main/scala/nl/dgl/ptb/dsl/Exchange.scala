@@ -14,18 +14,32 @@ case class ExchangeRename(oldKey: Any, newKey: Any) extends ExchangeEvent {}
 trait Exchange {
   def get[T](key: Any): T
   def rename(oldKey: Any, newKey: Any)
-  def put(key: Any, value: Any)
+  def put(key: String, value: Any)
   def remove(key: Any)
   def containsKey(key: Any): Boolean
   val listeners: ListBuffer[ExchangeEvent => Unit] = ListBuffer.empty
 
-  def step(step: Step): Exchange
+  def getLocal[T](key: Any): Option[T]
+
+  def step(nextStepIndex: Int): Exchange
+  def getStepIndex(): Int
+  def getIsStepFinished(): Boolean
+  def setStepIsFinished()
 }
 
 class ExchangeHashMap extends Exchange {
 
-  override def step(step: Step): Exchange = {
+  override def step(nextStepIndex: Int): Exchange = {
     return this;
+  }
+
+  def getStepIndex(): Int = 0
+
+  def getIsStepFinished() = false
+  def setStepIsFinished() = {}
+
+  def getLocal[T](key: Any): Option[T] = {
+    get(key)
   }
 
   private val properties = new HashMap[Any, Any]
@@ -53,7 +67,7 @@ class ExchangeHashMap extends Exchange {
     properties.remove(oldKey)
   }
 
-  def put(key: Any, value: Any) = {
+  def put(key: String, value: Any) = {
     if (key == null) {
       if (value == null) {
         throw new IllegalArgumentException("Neither value nor key may be null, and both are null.");

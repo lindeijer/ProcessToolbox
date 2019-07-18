@@ -17,12 +17,8 @@ import nl.dgl.logces.Scanner
 import nl.dgl.logces.Product
 import nl.dgl.logces.TransferItemsBetweenPallets
 import nl.dgl.logces.TransferProductBetweenVessels
-import nl.dgl.logces.SrcPallet
-import nl.dgl.logces.DstPallet
 import nl.dgl.logces.PalletScanner
 import nl.dgl.logces.PalletSelector
-import nl.dgl.logces.SrcVessel
-import nl.dgl.logces.DstVessel
 import nl.dgl.logces.Lot
 import nl.dgl.logces.Vessel
 import nl.dgl.logces.Scale
@@ -31,16 +27,17 @@ import nl.dgl.logces.Vessels
 import nl.dgl.ptb.dsl.Split
 import nl.dgl.ptb.dsl.SelectSource
 import nl.dgl.ptb.dsl.SelectFilter
-import nl.dgl.ptb.dsl.Selection
 import nl.dgl.logces.VesselSelectFiler
 import nl.dgl.ptb.dsl.Selector
 import nl.dgl.logces.VesselSelector
+import nl.dgl.logces.LoGcEs
+import nl.dgl.ptb.dsl.DSL
 
 class BijStortVoorbereiding(implicit aPalletSelector: PalletSelector, aVesselSelector: VesselSelector) extends Process({ //
   Split(BSV.Bijstort, Process { //
     Step(xnge => {
-      val product = xnge.get[BSV.Ingedient](BSV.Bijstort).product
-      xnge.put(Product, product)
+      val product = xnge.get[Ingedient](BSV.Bijstort).product
+      xnge.put(LoGcEs.Product, product)
     }) ~>
       Select(Pallets Where Product) ~>
       Step(BsvSetupTransferIngredientFromAnyPalletToBsvPallet) ~> //
@@ -49,7 +46,7 @@ class BijStortVoorbereiding(implicit aPalletSelector: PalletSelector, aVesselSel
       Step(BsvSetupTransferIngredientFromAnyVesselToBsvVessel) ~>
       Step(TransferProductBetweenVessels) ~>
       Step(xnge => {
-        val bijstortPallet = xnge.get[Pallet](DstPallet)
+        val bijstortPallet = xnge.get[Pallet](LoGcEs.DstPallet)
         val bijstortScoopAmount = xnge.get[Double](TransferProductBetweenVessels.AmountActual)
         xnge.put(BSV.BijstortResultaat, (bijstortPallet.totalArticleWeight_kg, bijstortScoopAmount))
       })
@@ -64,17 +61,18 @@ object BSV {
   val BijstortResultaat = Bijstort + "Result"
   val BijstortResultaaten = Bijstort + "ResultList"
 
-  case class Ingedient(product: Product, amount: Double) {}
 }
+
+case class Ingedient(product: Product, amount: Double) {}
 
 /////////////
 
 object BsvSetupTransferIngredientFromAnyPalletToBsvPallet extends (Exchange => Unit) {
 
   def apply(xnge: Exchange) = {
-    val palletWithProduct = xnge.get[Pallet](Selection)
+    val palletWithProduct = xnge.get[Pallet](DSL.Selection)
     // compute number of bags to transfer to new bsv pallet
-    val bijstortAmount = xnge.get[BSV.Ingedient](BSV.Bijstort).amount
+    val bijstortAmount = xnge.get[Ingedient](BSV.Bijstort).amount
     val itemAmount = palletWithProduct.article.weight_kg
     val bijstortItemCount = (bijstortAmount / itemAmount).toInt
     xnge.put(TransferItemsBetweenPallets.Count, bijstortItemCount)
@@ -84,8 +82,8 @@ object BsvSetupTransferIngredientFromAnyPalletToBsvPallet extends (Exchange => U
     // prepare for the pallet-transfer step
     val srcPallet = palletWithProduct
     val dstPallet = bijstortPallet
-    xnge.put(SrcPallet, srcPallet)
-    xnge.put(DstPallet, dstPallet)
+    xnge.put(LoGcEs.SrcPallet, srcPallet)
+    xnge.put(LoGcEs.DstPallet, dstPallet)
   }
 }
 
@@ -94,18 +92,18 @@ object BsvSetupTransferIngredientFromAnyPalletToBsvPallet extends (Exchange => U
 object BsvSetupTransferIngredientFromAnyVesselToBsvVessel extends (Exchange => Unit) {
 
   def apply(xnge: Exchange) = {
-    val vesselWithProduct = xnge.get[Vessel](Selection)
+    val vesselWithProduct = xnge.get[Vessel](DSL.Selection)
     // compute amount of KG to transfer to new scoop bag
     val product = xnge.get[Product](Product)
-    val bijstortAmount = xnge.get[BSV.Ingedient](BSV.Bijstort).amount
-    val bijstortPallet = xnge.get[Pallet](DstPallet)
+    val bijstortAmount = xnge.get[Ingedient](BSV.Bijstort).amount
+    val bijstortPallet = xnge.get[Pallet](LoGcEs.DstPallet)
     val bijstortScoopAmount = bijstortAmount - (bijstortPallet.totalArticleWeight_kg)
     // create a new scoop bag
     val bijstortVessel = Vessel("vessel:schepzak:" + UUID.randomUUID(), product) // print ook label ...
     println("Weeg " + bijstortScoopAmount + " kg van " + product + " af uit " + vesselWithProduct + " en schep in " + bijstortVessel)
     // prepare the vessel-transfer step.
-    xnge.put(SrcVessel, vesselWithProduct)
-    xnge.put(DstVessel, bijstortVessel)
+    xnge.put(LoGcEs.SrcVessel, vesselWithProduct)
+    xnge.put(LoGcEs.DstVessel, bijstortVessel)
     xnge.put(TransferProductBetweenVessels.AmountTarget, bijstortScoopAmount)
   }
 

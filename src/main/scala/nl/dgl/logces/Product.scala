@@ -40,7 +40,9 @@ object Article {
   def apply(code: String, product: Product, weight_kg: Double): Article = {
     articles.find(_.code.equals(code)).foreach(article => {
       if (article.product.equals(product) && article.weight_kg.equals(weight_kg)) {
-        throw new IllegalArgumentException("Article aleady exists: code=" + code);
+        return article;
+      } else {
+        throw new IllegalArgumentException("Article with code=" + code + " aleady exists: =" + article);
       }
     });
     val article = new Article(code, product, weight_kg);
