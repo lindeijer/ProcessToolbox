@@ -13,6 +13,6 @@ lazy val bsv = (project in file("."))
     libraryDependencies += "org.apache.tinkerpop" % "gremlin-core" % "3.4.1",
     libraryDependencies += "com.michaelpollmeier" %% "gremlin-scala" % "3.4.1.6", // tinkerpop  3.4.1 6=latest scala DSL wrt this tinkerpop
     libraryDependencies += "org.apache.tinkerpop" % "tinkergraph-gremlin" % "3.4.1",  // the inmemory DB  
-    libraryDependencies += "nl.dgl.romix.akka" % "akka-kryo-serialization-shaded_2.12" % "0.5.3-SNAPSHOT"
+    // in lib: libraryDependencies += "nl.dgl.romix.akka" % "akka-kryo-serialization-shaded_2.12" % "0.5.3-SNAPSHOT"
   )
   

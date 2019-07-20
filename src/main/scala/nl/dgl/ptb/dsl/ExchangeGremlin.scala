@@ -37,8 +37,6 @@ case class KeyAndValue(key: Option[Any], value: Option[Any])
 
 ////////////////////////////////////////////////////
 
-/////////////////////////////////////////////
-
 class ProductSerializer extends Serializer[Product] {
   def write(kryo: org.apache.tinkerpop.shaded.kryo.Kryo, output: Output, //
             product: nl.dgl.logces.Product): Unit = //
@@ -49,8 +47,6 @@ class ProductSerializer extends Serializer[Product] {
   def read(kryo: org.apache.tinkerpop.shaded.kryo.Kryo, input: Input, //
            clazz: Class[nl.dgl.logces.Product]): nl.dgl.logces.Product = //
     {
-      ExchangeGremlinGyro.registerStuff(kryo)
-
       return Product(input.readString())
     }
 }
@@ -107,87 +103,21 @@ class IngredientSerializer extends Serializer[Ingedient] {
 
 }
 
-// ================
-
-class MyGraphIoRegistry extends AbstractIoRegistry {
-
-  //def register(ioClass: final Class<? extends Io> ioClass, final Class clazz, final Object serializer) {
-  //      if (!registeredSerializers.containsKey(ioClass))
-  //          registeredSerializers.put(ioClass, new ArrayList<>());
-  //      registeredSerializers.get(ioClass).add(Pair.with(clazz, serializer));
-  //  }
-
-  //register(GraphSONIo.class, null, new MyGraphSimpleModule());
-  register(classOf[GryoIo], classOf[Product], new ProductSerializer());
-
-}
-
-// ================
+/////////////////////////////////////////////////
 
 object ExchangeGremlinGyro {
 
   val tinkerGraph = TinkerGraph.open
 
-  val bbbbbb = GryoIo.build();
-
-  // tinkerGraph.io(x$1)
-
-  //  public <I extends Io> I io(final Io.Builder<I> builder) {
-  //    return (I) builder.graph(this).registry(myGraphIoRegistry).create();
-  //  }}
-
-  def registerStuff(kryo: Kryo) = {
-    //    // Serialization of Scala enumerations
-    //    kryo.addDefaultSerializer(classOf[scala.Enumeration#Value], classOf[EnumerationSerializer])
-    //    kryo.register(Class.forName("scala.Enumeration$Val"))
-    //    kryo.register(classOf[scala.Enumeration#Value])
-    //
-    //    // Serialization of Scala maps like Trees, etc
-    //    kryo.addDefaultSerializer(classOf[scala.collection.Map[_, _]], classOf[ScalaImmutableMapSerializer]) // ScalaImmutableMapSerializer
-    //    kryo.addDefaultSerializer(classOf[scala.collection.generic.MapFactory[scala.collection.Map]], classOf[ScalaImmutableMapSerializer])
-    //
-    //    // Serialization of Scala sets
-    //    kryo.addDefaultSerializer(classOf[scala.collection.Set[_]], classOf[ScalaImmutableSetSerializer])
-    //    kryo.addDefaultSerializer(classOf[scala.collection.generic.SetFactory[scala.collection.Set]], classOf[ScalaImmutableSetSerializer])
-    //
-    //    // Serialization of all Traversable Scala collections like Lists, Vectors, etc
-    //    kryo.addDefaultSerializer(classOf[scala.collection.Traversable[_]], classOf[ScalaCollectionSerializer])
-    //
-    //    kryo.register(classOf[scala.collection.immutable.$colon$colon[_]], 40)
-    //    kryo.addDefaultSerializer(classOf[scala.Enumeration#Value], classOf[EnumerationSerializer])
-    //    kryo.addDefaultSerializer(classOf[scala.collection.immutable.Set[_]], classOf[ScalaImmutableSetSerializer])
-    //    kryo.addDefaultSerializer(classOf[scala.collection.generic.SetFactory[scala.collection.Set]], classOf[ScalaImmutableSetSerializer])
-
-  }
-
-  val gryoMapper = {
-
-    val registry = new MyGraphIoRegistry()
-
-    //private final Kryo kryo;
-    //private final Map<GraphFilter, StarGraphGryoSerializer> graphFilterCache = new HashMap<>();
-    //private final long batchSize;
-    //private GryoReader(final long batchSize, final Mapper<Kryo> gryoMapper) {
-    //    this.kryo = gryoMapper.createMapper();
-    //    this.batchSize = batchSize;
-
-    // val kyro0 = new GryoMapper().createMapper()
-
-    val resultGryoMapper = GryoMapper.build()
-      .addRegistry(registry)
-      .addCustom(Class.forName("scala.collection.immutable.$colon$colon"), new GryoScalaCollectionSerializer) // , new EnumerationSerializer) //
-      // kryo.addDefaultSerializer(classOf[scala.Enumeration#Value], classOf[EnumerationSerializer])
-      // $colon$colon is actually '::' which is the class for a list with a head and a tail.
-
+  val gryoMapper =
+    GryoMapper.build()
+      .addCustom(Class.forName("scala.collection.immutable.$colon$colon"), new GryoScalaCollectionSerializer)
       .addCustom(Class.forName("scala.collection.immutable.Nil$")) //
       .addCustom(Class.forName("scala.collection.mutable.ListBuffer")) //
       .addCustom(Class.forName("scala.collection.mutable.HashMap")) //
       .addCustom(Class.forName("scala.Tuple2$mcDD$sp")) //
       .addCustom(Class.forName("scala.collection.immutable.Map$Map2")) //
-      // .addCustom(classOf[Pallet]) //
-      // .addCustom(classOf[Article]) //
-      //.addCustom(classOf[Product], new ProductSerializer()) //
-      //.addCustom(classOf[nl.dgl.bsv.BsvList]) //
+      .addCustom(classOf[Product], new ProductSerializer()) //
       .addCustom(classOf[Ingedient], new IngredientSerializer()) //
       .addCustom(classOf[Pallet], new PalletSerializer()) //
       .addCustom(classOf[Article], new ArticleSerializer()) //
@@ -196,19 +126,12 @@ object ExchangeGremlinGyro {
       .addCustom(classOf[VesselMixed]) //
       .create
 
-    val kryo = resultGryoMapper.createMapper()
-
-    resultGryoMapper
-
-  }
-
   val graph: ScalaGraph = {
     if (java.nio.file.Files.isRegularFile(java.nio.file.Paths.get("ExchangeGremlin.kryo"))) {
       println("data EXISTS")
       val file = new File("ExchangeGremlin.kryo");
       val fis = new FileInputStream(file);
       tinkerGraph.io(gryo()).reader().mapper(gryoMapper).create().readGraph(fis, tinkerGraph)
-      // create will call gryoMapper.createMapper() which returns the kryo instance
     } else {
       println("data NEW")
     }
@@ -219,10 +142,6 @@ object ExchangeGremlinGyro {
     val file = new File("ExchangeGremlin.kryo");
     val fos = new FileOutputStream(file);
     tinkerGraph.io(gryo()).writer().mapper(gryoMapper).create().writeGraph(fos, tinkerGraph);
-
-    val gryoIo = tinkerGraph.io(gryo()) //.mapper()
-    //gryoIo.mapper().addCustom(clazz, serializer)
-
     println("data COMITTED")
   }
 
@@ -239,8 +158,6 @@ object ExchangeGremlin {
   val graph: ScalaGraph = ExchangeGremlinGyro.graph
 
   def commit() = ExchangeGremlinGyro.commit();
-
-  // def getRegisteredMarshallar(CCWithOption) { }
 
 }
 
