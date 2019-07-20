@@ -18,6 +18,7 @@ import gremlin.scala.ScalaGraph
 import gremlin.scala.Vertex
 import gremlin.scala.asScalaVertex
 import gremlin.scala.label
+import gremlin.scala.Key
 import nl.dgl.bsv.Ingedient
 import nl.dgl.logces.Article
 import nl.dgl.logces.Lot
@@ -181,17 +182,9 @@ class ExchangeGremlin private (stepIndex: Int, xngePrev: Exchange) extends Excha
     this.put("isFinished", true)
   }
 
-  import gremlin.scala._
-
   implicit val graph = ExchangeGremlin.graph;
 
-  def yo = {
-    val g = graph.traversal;
-    val vertices = g.V().toList()
-  }
-
   val indexKey = Key[Int]("index")
-  val key = Key[Any]("key")
 
   val vertex4step = {
     val v = graph.traversal.V().has("step", indexKey, stepIndex)
@@ -222,7 +215,7 @@ class ExchangeGremlin private (stepIndex: Int, xngePrev: Exchange) extends Excha
 
   def get[T](key: String): T = {
     val value = getLocal[T](key).getOrElse(xngePrev.get[T](key))
-    println("XNGE get: step.index=" + stepIndex + ",key=" + key + ",value=" + value)
+    // println("XNGE get: step.index=" + stepIndex + ",key=" + key + ",value=" + value)
     return value
   }
 

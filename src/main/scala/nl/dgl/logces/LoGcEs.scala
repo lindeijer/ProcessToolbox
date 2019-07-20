@@ -99,7 +99,7 @@ case class PalletScannerManiac(location: Int) extends PalletSelector {
     val task = new Runnable {
       def run() = {
         val selectedPallet = selectAnyPellet()
-        println("selectedPallet=" + selectedPallet)
+        // println("selectedPallet=" + selectedPallet)
         listeners.foreach(_.apply(selectedPallet))
       }
     }
