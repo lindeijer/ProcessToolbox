@@ -221,8 +221,6 @@ class ExchangeGremlin private (stepIndex: Int, xngePrev: Exchange) extends Excha
 
   override def put(key: String, value: Any) = {
     println("XNGE put: step.index=" + stepIndex + ",key=" + key + ",value=" + value)
-    println("");
-    //  implicit val marshaller = ExchangeGremlin.getRegisteredMarshallar(CCWithOption)
     val keyAndValue = graph + KeyAndValue(Option(key), Option(value))
     vertex4step --- "keyAndValue" --> keyAndValue
     ExchangeGremlin.commit();
