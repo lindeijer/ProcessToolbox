@@ -19,13 +19,7 @@ case class Process private (val top: Step, i: Int) extends Step(i) {
   override def step(xnge: Exchange) = {}
 
   override def process(xnge: Exchange): Exchange = {
-
     val xnge4this = xnge.step(this.index)
-
-    if (xnge4this.getIsStepFinished()) {
-      println("Process: isFinished! index=" + index)
-      return xnge4this
-    }
 
     xnge.listeners ++= xngeListeners
     listeners.foreach(_.apply(new StepStarted(this, Instant.now)))
@@ -33,10 +27,8 @@ case class Process private (val top: Step, i: Int) extends Step(i) {
     val xngeFromTopStep = top.process(xnge4this)
     top.listeners -= notifySubStepChanged
     listeners.foreach(_.apply(new StepFinished(this, Instant.now)))
-
-    xnge4this.setStepIsFinished()
-
     xnge.listeners --= xngeListeners
+
     return xngeFromTopStep
   }
 
@@ -195,7 +187,7 @@ abstract class Step(val index: Int) {
   /**
    * Execute the step. User extensions of this class should not override this method.
    */
-  def process(xnge: Exchange): Exchange = { 
+  def process(xnge: Exchange): Exchange = {
     val xnge4this = xnge.step(this.index)
 
     if (xnge4this.getIsStepFinished()) {
