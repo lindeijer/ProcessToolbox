@@ -10,8 +10,11 @@ trait Selector[T] {
   val listeners: ListBuffer[Any => Unit] = ListBuffer.empty
 }
 
-object Selector
-object Selection
+object DSL {
+
+  val Selector = "Selector"
+  val Selection = "Selection"
+}
 
 case class StepSelect[T] private (filter: SelectFilter[T], i: Int)(implicit selector: Selector[T]) extends Step(i) {
 
@@ -43,7 +46,7 @@ case class StepSelect[T] private (filter: SelectFilter[T], i: Int)(implicit sele
     // start listening to the selector. The UI may select as well.
 
     Try(Await.ready(selectionFuture, Duration.Inf)) match { // anti-pattern, in future change to onSuccess
-      case Success(selectedCandidate) => { xnge.put(Selection, selectedCandidate.value.get.get) }
+      case Success(selectedCandidate) => { xnge.put(DSL.Selection, selectedCandidate.value.get.get) }
       case Failure(_)                 => { println("Failure Happened") }
       case _                          => { println("Very Strange") }
     }
@@ -62,11 +65,11 @@ object Select { // IU presents the list to select from, selector does it some ot
 }
 
 trait SelectSource[T] { // Pallets object
-  def Where(xngeKey: Any): SelectFilter[T]
+  def Where(xngeKey: String): SelectFilter[T]
   def candidates(xnge: Exchange): List[T]
 }
 
 trait SelectFilter[T] { // Palets instantce
-  def And(xngeKey: Any): SelectFilter[T]
+  def And(xngeKey: String): SelectFilter[T]
   def candidates(xnge: Exchange): List[T]
 }

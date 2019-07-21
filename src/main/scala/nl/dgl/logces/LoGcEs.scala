@@ -6,16 +6,23 @@ import nl.dgl.ptb.dsl.Exchange
 import nl.dgl.ptb.dsl.Step
 import nl.dgl.ptb.dsl.Selector
 
-object SrcPallet {}
-object DstPallet {}
+object LoGcEs {
+
+  val SrcPallet = "SrcPallet"
+  val DstPallet = "DstPallet"
+  val SrcVessel = "SrcVessel"
+  val DstVessel = "DstVessel"
+  val Product = "Product"
+
+}
 
 object TransferItemsBetweenPallets extends (Exchange => Unit) {
 
-  object Count {}
+  val Count = "Count"
 
   def apply(xnge: Exchange) = {
-    val srcPallet = xnge.get[Pallet](SrcPallet)
-    val dstPallet = xnge.get[Pallet](DstPallet)
+    val srcPallet = xnge.get[Pallet](LoGcEs.SrcPallet)
+    val dstPallet = xnge.get[Pallet](LoGcEs.DstPallet)
     val transferItemsBetweenPalletsCount = xnge.get[Int](TransferItemsBetweenPallets.Count)
     Pallet.transfer(srcPallet, dstPallet, transferItemsBetweenPalletsCount)
   }
@@ -92,7 +99,7 @@ case class PalletScannerManiac(location: Int) extends PalletSelector {
     val task = new Runnable {
       def run() = {
         val selectedPallet = selectAnyPellet()
-        println("selectedPallet=" + selectedPallet)
+        // println("selectedPallet=" + selectedPallet)
         listeners.foreach(_.apply(selectedPallet))
       }
     }
@@ -120,15 +127,15 @@ case class PalletScannerManiac(location: Int) extends PalletSelector {
 
 object TransferProductBetweenVessels extends (Exchange => Unit) {
 
-  object AmountTarget {}
-  object AmountActual {}
-  object AmountMarginPercent {}
+  val AmountTarget = "AmountTarget"
+  val AmountActual = "AmountActual"
+  val AmountMarginPercent = "AmountMarginPercent"
 
   def apply(xnge: Exchange) = {
-    val srcVessel = xnge.get[Vessel](SrcVessel)
-    val dstVessel = xnge.get[Vessel](DstVessel)
+    val srcVessel = xnge.get[Vessel](LoGcEs.SrcVessel)
+    val dstVessel = xnge.get[Vessel](LoGcEs.DstVessel)
     val transferAmountTarget = xnge.get[Double](TransferProductBetweenVessels.AmountTarget)
-    val scale = xnge.get[Scale](Scale)
+    val scale = Scale(0) // xnge.get[Scale](Scale)
     val marginPercent = xnge.get[Double](AmountMarginPercent)
     //
     val weighedAmount = scale.weigh(transferAmountTarget, marginPercent).amount
@@ -140,9 +147,6 @@ object TransferProductBetweenVessels extends (Exchange => Unit) {
     println("TransferProductBetweenVessels: after; srcVessel.amount=" + srcVessel.amount + ",dstVessel.amount=" + dstVessel.amount)
   }
 }
-
-object SrcVessel {}
-object DstVessel {}
 
 //////////////
 

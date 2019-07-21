@@ -72,7 +72,7 @@ class ProcessStateView(topProcess: Process) extends BoxPanel(Orientation.Vertica
   setStepViewContents(new Label("Select a Step"))
 
   def myMxGraphSelectionAdded(added: Collection[_]) {
-    println("added=" + added)
+    // println("added=" + added)
     if (added == null || added.size() != 1) {
       return ;
     }
@@ -149,27 +149,27 @@ class ProcessStateView(topProcess: Process) extends BoxPanel(Orientation.Vertica
   def viewStep(step: Step, vParent: Any, isBefore: Boolean): Object = { // mxCell
     step match {
       case StepSequential(before, after, index) => {
-        println("ProcessSwingView.viewStep: StepSequential; isBefore=" + isBefore)
+        // println("ProcessSwingView.viewStep: StepSequential; isBefore=" + isBefore)
         val vBefore = viewStep(before, vParent, isBefore = true);
         val vAfter = viewStep(after, vParent, isBefore = false);
         graph.insertEdge(vParent, null, "~>", vBefore, vAfter);
         if (isBefore) return vAfter else return vBefore
       }
       case StepFunction(f, index) => {
-        println("ProcessSwingView.viewStep: StepFunction; isBefore=" + isBefore)
+        // println("ProcessSwingView.viewStep: StepFunction; isBefore=" + isBefore)
         val vFunc = graph.insertVertex(vParent, f.getClass.getSimpleName, step, 0, 0, 80, 30, "fillColor=green");
         vertexes += vFunc.asInstanceOf[mxCell]
         return vFunc
       }
       case Process(top, index) => {
-        println("ProcessSwingView.viewStep: Process; isBefore=" + isBefore)
+        // println("ProcessSwingView.viewStep: Process; isBefore=" + isBefore)
         val vProcess = graph.insertVertex(vParent, "Process@" + step.index, step, 0, 0, 80, 30, "fillColor=green");
         vertexes += vProcess.asInstanceOf[mxCell]
         viewStep(top, vProcess, isBefore)
         return vProcess
       }
       case StepSplit(splitListKey, splitItemKey, splitItemResultKey, splitResultsKey, stepToSplit, index) => {
-        println("ProcessSwingView.viewStep: StepSplit; splitListKey=" + splitListKey + ",isBefore=" + isBefore)
+        // println("ProcessSwingView.viewStep: StepSplit; splitListKey=" + splitListKey + ",isBefore=" + isBefore)
         val vStepSplit = graph.insertVertex(vParent, "Split@" + step.index, step, 0, 0, 80, 30, "fillColor=green");
         vertexes += vStepSplit.asInstanceOf[mxCell]
         val vStepToSplit = viewStep(stepToSplit, vStepSplit, isBefore)
@@ -188,13 +188,13 @@ class ProcessStateView(topProcess: Process) extends BoxPanel(Orientation.Vertica
         return vStepSplit
       }
       case StepSelect(filter, index) => {
-        println("ProcessSwingView.viewStep: StepSelect; filter=" + filter + ",isBefore=" + isBefore)
+        // println("ProcessSwingView.viewStep: StepSelect; filter=" + filter + ",isBefore=" + isBefore)
         val vStepSelect = graph.insertVertex(vParent, "Select@" + step.index, step, 0, 0, 80, 30, "fillColor=green");
         vertexes += vStepSelect.asInstanceOf[mxCell]
         return vStepSelect
       }
       case x => {
-        println("ProcessSwingView.viewStep: DEFAULT;  step=" + step + ",isBefore=" + isBefore)
+        // println("ProcessSwingView.viewStep: DEFAULT;  step=" + step + ",isBefore=" + isBefore)
         val vertex = graph.insertVertex(vParent, step.getClass.getName, step, 0, 0, 80, 30, "fillColor=green"); // 20, 20, 80,30 // x,y,w,h
         vertexes += vertex.asInstanceOf[mxCell]
         return vertex;
@@ -215,7 +215,7 @@ class ProcessStateView(topProcess: Process) extends BoxPanel(Orientation.Vertica
 
   def setStepViewStyle(step: Step, style: String) {
     vertexes.filter(_.getValue.equals(step)).foreach(vertex => {
-      println("step=" + step + ",vertex=" + vertex)
+      // println("step=" + step + ",vertex=" + vertex)
       graph.setCellStyle(style, Array(vertex))
     })
   }
