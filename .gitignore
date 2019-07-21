@@ -5,3 +5,4 @@
 /.settings/
 /target/
 /ExchangeGremlin.kryo
+.cache-tests

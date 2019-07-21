@@ -1,21 +1,14 @@
-package test
+package nl.dgl.ptb.serialization.tinkerpop
 
 import org.apache.tinkerpop.shaded.kryo.Kryo
-import org.apache.tinkerpop.shaded.kryo.Serializer
 import org.apache.tinkerpop.shaded.kryo.io.Output
 import org.apache.tinkerpop.shaded.kryo.io.Input
 import org.apache.tinkerpop.shaded.minlog.Log
-import org.apache.tinkerpop.shaded.kryo.Kryo.DefaultInstantiatorStrategy
-import org.apache.tinkerpop.shaded.objenesis.strategy.StdInstantiatorStrategy
 import org.apache.tinkerpop.shaded.kryo.Kryo
-import com.romix.scala.serialization.kryo.EnumerationSerializer
-import com.romix.scala.serialization.kryo.ScalaImmutableSetSerializer
 import com.romix.scala.serialization.kryo.ScalaCollectionSerializer
-import com.romix.scala.serialization.kryo.ScalaImmutableMapSerializer
 import java.io.FileInputStream
 import java.io.FileOutputStream
-
-import nl.dgl.ptb.serialization.tinkerpop.GryoScalaCollectionSerializer
+import com.romix.scala.serialization.kryo.ScalaCollectionSerializer
 
 object TestSerializeLIstKryo extends App {
 

@@ -1,39 +1,20 @@
-package test
+package nl.dgl.ptb.serialization.tinkerpop
 
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
-
-import org.apache.tinkerpop.gremlin.structure.io.IoCore.gryo
 import org.apache.tinkerpop.gremlin.structure.io.gryo.GryoMapper
 import org.apache.tinkerpop.gremlin.structure.io.gryo.GryoReader
 import org.apache.tinkerpop.gremlin.structure.io.gryo.GryoWriter
 import org.apache.tinkerpop.gremlin.tinkergraph.structure.TinkerGraph
-
-import org.apache.tinkerpop.shaded.kryo.Serializer
 import org.apache.tinkerpop.shaded.kryo.io.Input
 import org.apache.tinkerpop.shaded.kryo.io.Output
-
-import com.romix.scala.serialization.kryo.ScalaCollectionSerializer
-import org.apache.tinkerpop.shaded.kryo.Kryo.DefaultInstantiatorStrategy
-import org.apache.tinkerpop.shaded.objenesis.strategy.StdInstantiatorStrategy
-
 import gremlin.scala.GraphAsScala
 import gremlin.scala.ScalaGraph
-import gremlin.scala.Vertex
 import gremlin.scala.asScalaVertex
 import gremlin.scala.label
-
-import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.GraphTraversalSource
-import org.apache.tinkerpop.gremlin.structure.io.AbstractIoRegistry
 import org.apache.tinkerpop.gremlin.structure.io.gryo.GryoIo
-import org.apache.tinkerpop.gremlin.structure.Graph
-import org.apache.tinkerpop.shaded.kryo.Kryo
 import java.util.UUID
-import org.apache.tinkerpop.shaded.kryo.serializers.DefaultSerializers
-import org.apache.tinkerpop.shaded.kryo.serializers.FieldSerializer
-import nl.dgl.ptb.serialization.tinkerpop.GryoScalaCollectionSerializer
-import com.romix.scala.serialization.kryo.ScalaCollectionSerializer
 
 object TestGremlinGyro extends App {
 
