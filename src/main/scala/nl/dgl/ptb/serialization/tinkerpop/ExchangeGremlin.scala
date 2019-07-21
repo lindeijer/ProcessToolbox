@@ -1,4 +1,4 @@
-package nl.dgl.ptb.dsl
+package nl.dgl.ptb.serialization.tinkerpop
 
 import java.io.File
 import java.io.FileInputStream
@@ -31,7 +31,10 @@ import org.apache.tinkerpop.gremlin.structure.io.AbstractIoRegistry
 import org.apache.tinkerpop.gremlin.structure.io.gryo.GryoIo
 import org.apache.tinkerpop.gremlin.structure.Graph
 import org.apache.tinkerpop.shaded.kryo.Kryo
-import nl.dgl.tinkerpop.shaded.kryo.serializers.GryoScalaCollectionSerializer
+import nl.dgl.ptb.serialization.tinkerpop.GryoScalaCollectionSerializer
+import nl.dgl.ptb.dsl.Exchange
+import nl.dgl.ptb.dsl.ExchangeHashMap
+import nl.dgl.ptb.dsl.StepConstructionHelper
 
 @label("keyandvalue")
 case class KeyAndValue(key: Option[Any], value: Option[Any])

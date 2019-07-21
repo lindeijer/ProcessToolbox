@@ -15,7 +15,7 @@ import com.romix.scala.serialization.kryo.ScalaImmutableMapSerializer
 import java.io.FileInputStream
 import java.io.FileOutputStream
 
-import nl.dgl.tinkerpop.shaded.kryo.serializers.GryoScalaCollectionSerializer
+import nl.dgl.ptb.serialization.tinkerpop.GryoScalaCollectionSerializer
 
 object TestSerializeLIstKryo extends App {
 

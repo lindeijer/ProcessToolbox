@@ -16,7 +16,7 @@
  * ****************************************************************************
  */
 
-package nl.dgl.tinkerpop.shaded.kryo.serializers
+package nl.dgl.ptb.serialization.tinkerpop
 
 import scala.collection.Traversable
 import org.apache.tinkerpop.shaded.kryo.Kryo

@@ -32,7 +32,7 @@ import org.apache.tinkerpop.shaded.kryo.Kryo
 import java.util.UUID
 import org.apache.tinkerpop.shaded.kryo.serializers.DefaultSerializers
 import org.apache.tinkerpop.shaded.kryo.serializers.FieldSerializer
-import nl.dgl.tinkerpop.shaded.kryo.serializers.GryoScalaCollectionSerializer
+import nl.dgl.ptb.serialization.tinkerpop.GryoScalaCollectionSerializer
 import com.romix.scala.serialization.kryo.ScalaCollectionSerializer
 
 object TestGremlinGyro extends App {

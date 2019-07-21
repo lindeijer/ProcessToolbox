@@ -18,7 +18,7 @@ import nl.dgl.logces.TransferProductBetweenVessels.AmountMarginPercent
 import nl.dgl.ptb.ui.swing.ProcessOverView
 import nl.dgl.ptb.ui.swing.ProcessOverView
 import scala.swing.Frame
-import nl.dgl.ptb.dsl.ExchangeGremlin
+import nl.dgl.ptb.serialization.tinkerpop.ExchangeGremlin
 import nl.dgl.logces.VesselSelector
 import nl.dgl.logces.VesselScannerLoser
 import nl.dgl.ptb.dsl.StepConstructionHelper
