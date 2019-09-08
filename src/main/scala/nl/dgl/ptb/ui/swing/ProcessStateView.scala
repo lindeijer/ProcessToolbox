@@ -12,7 +12,6 @@ import scala.collection.mutable.HashMap
 import com.mxgraph.model.mxCell
 import nl.dgl.ptb.dsl.StepStarted
 import nl.dgl.ptb.dsl.StepFinished
-import nl.dgl.ptb.dsl.StepFunction
 import nl.dgl.ptb.dsl.StepSplit
 import nl.dgl.ptb.dsl.StepSelect
 import com.mxgraph.util.mxEventSource
@@ -33,6 +32,7 @@ import scala.concurrent.duration._
 import scala.collection.mutable.ListBuffer
 import scala.swing.BoxPanel
 import scala.swing.Orientation
+import nl.dgl.ptb.dsl.StepAsync
 
 /**
  * A view upon the process state, where each step has a state.
@@ -155,7 +155,7 @@ class ProcessStateView(topProcess: Process) extends BoxPanel(Orientation.Vertica
         graph.insertEdge(vParent, null, "~>", vBefore, vAfter);
         if (isBefore) return vAfter else return vBefore
       }
-      case StepFunction(f, index) => {
+      case StepAsync(f, index) => {
         // println("ProcessSwingView.viewStep: StepFunction; isBefore=" + isBefore)
         val vFunc = graph.insertVertex(vParent, f.getClass.getSimpleName, step, 0, 0, 80, 30, "fillColor=green");
         vertexes += vFunc.asInstanceOf[mxCell]

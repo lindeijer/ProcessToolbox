@@ -6,6 +6,13 @@ import scala.collection.mutable.HashMap
 import scala.concurrent.Promise
 import java.util.concurrent.atomic.AtomicInteger
 import gremlin.scala.label
+import scala.concurrent.Future
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Await
+import scala.concurrent.duration.Duration
+import ExecutionContext.Implicits.global
+import scala.util.Success
+import scala.util.Failure
 
 case class Process private (val top: Step, i: Int) extends Step(i) {
 
@@ -16,7 +23,9 @@ case class Process private (val top: Step, i: Int) extends Step(i) {
     Process(top.split())
   }
 
-  override def step(xnge: Exchange) = {}
+  override def apply(xnge: Exchange): Future[Exchange] = {
+    Future[Exchange](xnge)
+  }
 
   override def process(xnge: Exchange): Exchange = {
     val xnge4this = xnge.step(this.index)
@@ -56,7 +65,9 @@ case class StepConcurrent private (a: Step, b: Step, i: Int) extends Step(i) {
 
   def split(): Step = ???
 
-  override def step(xnge: Exchange) = {}
+  override def apply(xnge: Exchange): Future[Exchange] = {
+    Future[Exchange](xnge)
+  }
 
   override def process(xnge: Exchange): Exchange = ???
 
@@ -71,7 +82,9 @@ case class StepSequential private (val a: Step, val b: Step, i: Int) extends Ste
     StepSequential(a.split, b.split, StepConstructionHelper.counter.getAndIncrement())
   }
 
-  override def step(xnge: Exchange) = {}
+  override def apply(xnge: Exchange): Future[Exchange] = {
+    Future[Exchange](xnge)
+  }
 
   override def process(xnge: Exchange): Exchange = {
     a.listeners += notifySubStepChanged
@@ -91,7 +104,9 @@ class StepChoice private (steps: Vector[Step], chooser: String, i: Int) extends 
 
   def split(): Step = ???
 
-  override def step(xnge: Exchange) = ???
+  override def apply(xnge: Exchange) = ???
+
+  override def process(xnge: Exchange): Exchange = ???
 
 }
 
@@ -101,7 +116,9 @@ case class StepSplit private (splitListKey: String, splitItemKey: String, splitI
 
   def split(): Step = ???
 
-  override def step(xnge: Exchange) = {}
+  override def apply(xnge: Exchange): Future[Exchange] = {
+    Future[Exchange](xnge)
+  }
 
   val items2StepPromise = Promise[Map[Any, Step]]()
   val items2StepFuture = items2StepPromise.future
@@ -166,6 +183,9 @@ object StepConstructionHelper {
   val counter = new AtomicInteger(0)
 }
 
+/**
+ * Action, actually. Everything is an action.
+ */
 @label("step")
 abstract class Step(val index: Int) {
 
@@ -179,30 +199,49 @@ abstract class Step(val index: Int) {
     new StepConcurrent(this, next)
   }
 
-  /**
-   * Execute the step's function. User extensions of this class must override this method.
-   */
-  def step(xnge: Exchange)
+  def f(xnge: Exchange): Future[Exchange] = ???
 
   /**
-   * Execute the step. User extensions of this class should not override this method.
+   * The action's asynchronous function.
    */
-  def process(xnge: Exchange): Exchange = {
+  def apply(xnge: Exchange): Future[Exchange] = {
     val xnge4this = xnge.step(this.index)
 
+    val xngePromise = Promise[Exchange]()
+    val xngeFuture = xngePromise.future
+
     if (xnge4this.getIsStepFinished()) {
-      println("Step: isFinished! index=" + index)
-      listeners.foreach(_.apply(new StepFinished(this, Instant.now)))
-      return xnge4this
+      println("Leap: isFinished! index=" + index)
+      xngePromise.success(xnge)
+    } else {
+      listeners.foreach(_.apply(new StepStarted(this, Instant.now)))
+      xngePromise.completeWith(f(xnge4this))
+      xngeFuture.andThen({
+        case Success(xngeResult) => {
+          xngeResult.setStepIsFinished()
+        }
+      })
     }
+    xngeFuture.andThen({
+      case Success(xngeResult) => {
+        listeners.foreach(_.apply(new StepFinished(this, Instant.now)))
+      }
+    })
+    return xngeFuture
+  }
 
-    listeners.foreach(_.apply(new StepStarted(this, Instant.now)))
-    step(xnge4this) // the xnge is modified as a side effect.
-    listeners.foreach(_.apply(new StepFinished(this, Instant.now)))
-
-    xnge4this.setStepIsFinished();
-
-    return xnge4this;
+  /**
+   * Execute the action's function synchronously. Returns the exchange or throws the exception provided by the function's future.
+   */
+  @throws(classOf[Exception])
+  def process(xnge: Exchange): Exchange = {
+    val result = apply(xnge)
+    Await.result(result, Duration.Inf)
+    if (result.value.get.isSuccess) {
+      return result.value.get.get
+    } else {
+      throw result.value.get.failed.get
+    }
   }
 
   val listeners: ListBuffer[StepEvent => Unit] = ListBuffer.empty
@@ -213,25 +252,69 @@ abstract class Step(val index: Int) {
 
 }
 
-case class StepFunction private (val f: Exchange => Any, i: Int) extends Step(i) {
+/**
+ * Step Action that executes locally.
+ */
+case class StepSync private (val f: Exchange => Any, i: Int) extends Step(i) {
 
   def this(f: Exchange => Any) = this(f, StepConstructionHelper.counter.getAndIncrement())
 
   def split(): Step = {
-    StepFunction(f, StepConstructionHelper.counter.getAndIncrement()) // NO CLONE HERE OF F, SO THE F MAY NOT HAVE SIDE-EFFECTS
+    StepSync(f, StepConstructionHelper.counter.getAndIncrement()) // NO CLONE HERE OF F, SO THE F MAY NOT BE STATEFULL
   }
 
-  override def step(xnge: Exchange) = {
-    f.apply(xnge)
+  private def applySync(xnge: Exchange) = {
+    val xnge4this = xnge.step(this.index)
+    if (xnge4this.getIsStepFinished()) {
+      println("Step: isFinished! index=" + index)
+    } else {
+      listeners.foreach(_.apply(new StepStarted(this, Instant.now)))
+      f.apply(xnge) // the xnge is modified as a side effect.
+    }
+    listeners.foreach(_.apply(new StepFinished(this, Instant.now)))
+  }
+
+  override def apply(xnge: Exchange): Future[Exchange] = {
+    applySync(xnge)
+    val xngePromise = Promise[Exchange]()
+    val xngeFuture = xngePromise.future
+    xngePromise.success(xnge)
+    Future[Exchange](xnge)
+  }
+
+  override def process(xnge: Exchange): Exchange = {
+    applySync(xnge)
+    return xnge;
   }
 
 }
 
-object Step extends StepFunction(null) {
+object Step extends StepSync(null) {
 
   def apply(f: Exchange => Any): Step = {
-    return new StepFunction(f);
+    return new StepSync(f);
   }
 
 }
 
+/////////////////////////////////
+
+case class StepAsync private (val function: Exchange => Future[Exchange], i: Int) extends Step(i) {
+
+  def this(f: Exchange => Future[Exchange]) = this(f, StepConstructionHelper.counter.getAndIncrement())
+
+  def split(): Step = {
+    StepAsync(f, StepConstructionHelper.counter.getAndIncrement()) // NO CLONE HERE OF F, SO THE F MAY NOT BE STATEFULL
+  }
+
+  override def f(xnge: Exchange): Future[Exchange] = function.apply(xnge)
+
+}
+
+object Leap extends StepAsync(null) {
+
+  def apply(f: Exchange => Future[Exchange]): Step = {
+    return new StepAsync(f);
+  }
+
+}

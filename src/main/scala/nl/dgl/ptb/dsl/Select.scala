@@ -5,6 +5,7 @@ import ExecutionContext.Implicits.global
 import scala.util.{ Try, Success, Failure }
 import scala.concurrent.duration._
 import scala.collection.mutable.ListBuffer
+import java.time.Instant
 
 trait Selector[T] {
   val listeners: ListBuffer[Any => Unit] = ListBuffer.empty
@@ -33,9 +34,11 @@ case class StepSelect[T] private (filter: SelectFilter[T], i: Int)(implicit sele
   val candidatesPromise = Promise[List[Any]]()
   val candidatesFuture = candidatesPromise.future
 
-  def step(xnge: Exchange): Unit = {
+  override def f(xnge: Exchange): Future[Exchange] = {
+
     val candidates = filter.candidates(xnge)
     candidatesPromise.success(candidates)
+
     def notifySelection(selection: Any) = {
       if (candidates.contains(selection)) {
         selectionPromise.success(selection)
@@ -45,12 +48,20 @@ case class StepSelect[T] private (filter: SelectFilter[T], i: Int)(implicit sele
 
     // start listening to the selector. The UI may select as well.
 
-    Try(Await.ready(selectionFuture, Duration.Inf)) match { // anti-pattern, in future change to onSuccess
-      case Success(selectedCandidate) => { xnge.put(DSL.Selection, selectedCandidate.value.get.get) }
-      case Failure(_)                 => { println("Failure Happened") }
-      case _                          => { println("Very Strange") }
-    }
-    selector.listeners -= notifySelection
+    val xngePromise = Promise[Exchange]()
+
+    selectionFuture.andThen({
+      case Success(selection) => {
+        xnge.put(DSL.Selection, selection)
+        xngePromise.success(xnge)
+        selector.listeners -= notifySelection
+      }
+      case Failure(cause) =>
+        xngePromise.failure(cause)
+        selector.listeners -= notifySelection
+    })
+
+    return xngePromise.future;
   }
 
 }
