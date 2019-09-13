@@ -265,6 +265,7 @@ case class StepSync private (val f: Exchange => Any, i: Int) extends Step(i) {
     } else {
       listeners.foreach(_.apply(new StepStarted(this, Instant.now)))
       f.apply(xnge) // the xnge is modified as a side effect.
+      xnge4this.setStepIsFinished()
     }
     listeners.foreach(_.apply(new StepFinished(this, Instant.now)))
   }

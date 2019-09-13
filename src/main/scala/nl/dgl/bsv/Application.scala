@@ -82,7 +82,8 @@ object MES_4C_LIENT extends Frame with App {
 
   // xnge
 
-  val xnge = new ExchangeHashMap() // ExchangeGremlin();
+  val xnge = // new ExchangeHashMap()
+    new ExchangeGremlin();
 
   println("!!!!!!!!!!!!!!!!!! xnge.index=" + xnge.getStepIndex())
 

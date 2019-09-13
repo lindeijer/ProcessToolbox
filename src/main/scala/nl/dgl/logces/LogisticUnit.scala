@@ -75,7 +75,7 @@ object Pallet {
     if (dst.article.equals(Article.unknown) && dst.itemCount == 0) {
       dst.article = src.article
     } else {
-      throw new IllegalArgumentException("Destination Pallet has wrong article, found " + dst.article + " but expected " + src.article);
+      throw new IllegalArgumentException("Destination Pallet should be empty, but dst.article=" + dst.article + " and dst.itemCount=" + dst.itemCount);
     }
     src.itemCount = src.itemCount - transferCount
     dst.itemCount = dst.itemCount + transferCount
