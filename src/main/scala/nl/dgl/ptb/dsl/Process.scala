@@ -24,21 +24,20 @@ case class Process private (val top: Step, i: Int) extends Step(i) {
   }
 
   override def apply(xnge: Exchange): Future[Exchange] = {
-    Future[Exchange](xnge)
-  }
-
-  override def process(xnge: Exchange): Exchange = {
     val xnge4this = xnge.step(this.index)
-
     xnge.listeners ++= xngeListeners
+    val promiseXngeTop = Promise[Exchange]();
     listeners.foreach(_.apply(new StepStarted(this, Instant.now)))
     top.listeners += notifySubStepChanged
-    val xngeFromTopStep = top.process(xnge4this)
-    top.listeners -= notifySubStepChanged
-    listeners.foreach(_.apply(new StepFinished(this, Instant.now)))
-    xnge.listeners --= xngeListeners
-
-    return xngeFromTopStep
+    top.apply(xnge4this).andThen({
+      case Success(xngeFromTopStep) => {
+        top.listeners -= notifySubStepChanged
+        listeners.foreach(_.apply(new StepFinished(this, Instant.now)))
+        xnge.listeners --= xngeListeners
+        promiseXngeTop.success(xngeFromTopStep)
+      }
+    })
+    promiseXngeTop.future
   }
 
   val xngeListeners: ListBuffer[ExchangeEvent => Unit] = ListBuffer.empty
@@ -69,8 +68,6 @@ case class StepConcurrent private (a: Step, b: Step, i: Int) extends Step(i) {
     Future[Exchange](xnge)
   }
 
-  override def process(xnge: Exchange): Exchange = ???
-
 }
 
 case class StepSequential private (val a: Step, val b: Step, i: Int) extends Step(i) {
@@ -83,17 +80,21 @@ case class StepSequential private (val a: Step, val b: Step, i: Int) extends Ste
   }
 
   override def apply(xnge: Exchange): Future[Exchange] = {
-    Future[Exchange](xnge)
-  }
-
-  override def process(xnge: Exchange): Exchange = {
     a.listeners += notifySubStepChanged
-    val xngeFromA = a.process(xnge)
-    a.listeners -= notifySubStepChanged
-    b.listeners += notifySubStepChanged
-    val xngeFromB = b.process(xngeFromA);
-    b.listeners -= notifySubStepChanged
-    return xngeFromB
+    val promiseXngeB = Promise[Exchange]();
+    a.apply(xnge).andThen({
+      case Success(xngeFromA) => {
+        a.listeners -= notifySubStepChanged
+        b.listeners += notifySubStepChanged
+        b.apply(xngeFromA).andThen({
+          case Success(xngeFromB) => {
+            b.listeners -= notifySubStepChanged
+            promiseXngeB.success(xngeFromB)
+          }
+        });
+      }
+    })
+    promiseXngeB.future
   }
 
 }
@@ -106,9 +107,11 @@ class StepChoice private (steps: Vector[Step], chooser: String, i: Int) extends 
 
   override def apply(xnge: Exchange) = ???
 
-  override def process(xnge: Exchange): Exchange = ???
-
 }
+
+//wow, check out https://github.com/S-Mach/s_mach.concurrent
+
+import scala.collection.mutable.ListBuffer
 
 case class StepSplit private (splitListKey: String, splitItemKey: String, splitItemResultKey: String, splitResultsKey: String, stepToSplit: Step, i: Int) extends Step(i) {
 
@@ -116,44 +119,58 @@ case class StepSplit private (splitListKey: String, splitItemKey: String, splitI
 
   def split(): Step = ???
 
+  val promiseSteps = Promise[List[Step]]()
+  val futureSteps = promiseSteps.future // the view looks at this.
+
   override def apply(xnge: Exchange): Future[Exchange] = {
-    Future[Exchange](xnge)
-  }
-
-  val items2StepPromise = Promise[Map[Any, Step]]()
-  val items2StepFuture = items2StepPromise.future
-
-  override def process(xnge: Exchange): Exchange = {
     val xnge4this = xnge.step(this.index);
-
     if (xnge4this.getIsStepFinished()) {
       println("StepSplit: isFinished! index=" + index)
-      return xnge4this
+      Future[Exchange](xnge)
     }
-
     listeners.foreach(_.apply(new StepStarted(this, Instant.now)))
-    val splitList = xnge.get[List[Any]](splitListKey)
-    val items2Step = splitList.map {
-      (_, stepToSplit.split())
-    } toMap;
-    items2StepPromise.success(items2Step)
-    val splitResults = new HashMap[Any, Any]
-    for (splitItem <- splitList) {
-      val stepForItem = items2Step.get(splitItem).get
-      val xnge4splitStep = xnge4this.step(stepForItem.index)
-      xnge4splitStep.put(splitItemKey, splitItem)
+    val items = xnge.get[List[Any]](splitListKey)
+    val items2steps = items.map(item => {
+      val stepForItem = stepToSplit.split()
+      (item, stepForItem)
+    })
+    val steps = items2steps.map(item2step => {
+      item2step._2
+    })
+    promiseSteps.success(steps)
+    val futuresForItems = items2steps.map(item2step => {
+      val item = item2step._1
+      val stepForItem = item2step._2
+      val xngeForItem = xnge4this.step(stepForItem.index)
+      xngeForItem.put(splitItemKey, item)
       stepForItem.listeners += notifySubStepChanged
-      val xnge4splitStepResult = stepForItem.process(xnge4splitStep);
-      stepForItem.listeners -= notifySubStepChanged
-      val splitItemResult = xnge4splitStepResult.get[Any](splitItemResultKey)
-      splitResults.put(splitItem, splitItemResult)
-    }
-    xnge4this.put(splitResultsKey, splitResults.toMap)
-    listeners.foreach(_.apply(new StepFinished(this, Instant.now)))
-
-    xnge4this.setStepIsFinished()
-
-    return xnge4this
+      stepForItem.apply(xngeForItem).andThen({
+        case _ => {
+          stepForItem.listeners -= notifySubStepChanged
+        }
+      })
+    })
+    val splitResults = new HashMap[Any, Any]
+    Future.sequence(futuresForItems).andThen({ // with the list of exchanges from the split steps.
+      case Success(xnges) => {
+        xnges.foreach(xnge => {
+          val item = xnge.get[Any](splitItemKey)
+          val resultForItem = xnge.get[Any](splitItemResultKey)
+          splitResults.put(item, resultForItem)
+        })
+        xnge4this.put(splitResultsKey, splitResults.toMap)
+      }
+      case Failure(reason) => {
+        xnge4this.put(splitResultsKey, reason)
+      }
+    }).andThen({ // finally
+      case _ => {
+        listeners.foreach(_.apply(new StepFinished(this, Instant.now)))
+        xnge4this.setStepIsFinished()
+      }
+    }).map(_ => { // return the split's exchange rather that the list of split exchanges.
+      xnge4this
+    })
   }
 
 }
@@ -206,42 +223,20 @@ abstract class Step(val index: Int) {
    */
   def apply(xnge: Exchange): Future[Exchange] = {
     val xnge4this = xnge.step(this.index)
-
-    val xngePromise = Promise[Exchange]()
-    val xngeFuture = xngePromise.future
-
     if (xnge4this.getIsStepFinished()) {
       println("Leap: isFinished! index=" + index)
-      xngePromise.success(xnge)
-    } else {
-      listeners.foreach(_.apply(new StepStarted(this, Instant.now)))
-      xngePromise.completeWith(f(xnge4this))
-      xngeFuture.andThen({
-        case Success(xngeResult) => {
-          xngeResult.setStepIsFinished()
-        }
-      })
+      listeners.foreach(_.apply(new StepFinished(this, Instant.now)))
+      return Future[Exchange](xnge4this);
     }
-    xngeFuture.andThen({
+    listeners.foreach(_.apply(new StepStarted(this, Instant.now)))
+    val xngeFutureResult = f(xnge4this)
+    xngeFutureResult.andThen({
       case Success(xngeResult) => {
+        xngeResult.setStepIsFinished()
         listeners.foreach(_.apply(new StepFinished(this, Instant.now)))
       }
     })
-    return xngeFuture
-  }
-
-  /**
-   * Execute the action's function synchronously. Returns the exchange or throws the exception provided by the function's future.
-   */
-  @throws(classOf[Exception])
-  def process(xnge: Exchange): Exchange = {
-    val result = apply(xnge)
-    Await.result(result, Duration.Inf)
-    if (result.value.get.isSuccess) {
-      return result.value.get.get
-    } else {
-      throw result.value.get.failed.get
-    }
+    return xngeFutureResult
   }
 
   val listeners: ListBuffer[StepEvent => Unit] = ListBuffer.empty
@@ -276,15 +271,7 @@ case class StepSync private (val f: Exchange => Any, i: Int) extends Step(i) {
 
   override def apply(xnge: Exchange): Future[Exchange] = {
     applySync(xnge)
-    val xngePromise = Promise[Exchange]()
-    val xngeFuture = xngePromise.future
-    xngePromise.success(xnge)
     Future[Exchange](xnge)
-  }
-
-  override def process(xnge: Exchange): Exchange = {
-    applySync(xnge)
-    return xnge;
   }
 
 }

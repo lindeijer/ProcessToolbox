@@ -173,12 +173,12 @@ class ProcessStateView(topProcess: Process) extends BoxPanel(Orientation.Vertica
         val vStepSplit = graph.insertVertex(vParent, "Split@" + step.index, step, 0, 0, 80, 30, "fillColor=green");
         vertexes += vStepSplit.asInstanceOf[mxCell]
         val vStepToSplit = viewStep(stepToSplit, vStepSplit, isBefore)
-        step.asInstanceOf[StepSplit].items2StepFuture onComplete {
-          case Success(items2Step) => {
+        step.asInstanceOf[StepSplit].futureSteps andThen {
+          case Success(stepsForSplit) => {
             graph.getModel().beginUpdate();
             graph.cellsRemoved(Array(vStepToSplit))
-            for (stepForItem <- items2Step.values) {
-              viewStep(stepForItem, vStepSplit, isBefore)
+            for (stepSplit <- stepsForSplit) {
+              viewStep(stepSplit, vStepSplit, isBefore)
             }
             layout.execute(graph.getDefaultParent());
             graph.getModel().endUpdate();
@@ -215,7 +215,7 @@ class ProcessStateView(topProcess: Process) extends BoxPanel(Orientation.Vertica
 
   def setStepViewStyle(step: Step, style: String) {
     vertexes.filter(_.getValue.equals(step)).foreach(vertex => {
-      // println("step=" + step + ",vertex=" + vertex)
+      println("step=" + step + ",vertex=" + vertex)
       graph.setCellStyle(style, Array(vertex))
     })
   }

@@ -90,6 +90,13 @@ object PalletScanner {
 import java.util.concurrent._
 import gremlin.scala.label
 
+/**
+ * This loser never scans a pallet
+ */
+case class PalletScannerLoser(location: Int) extends PalletSelector {
+
+}
+
 case class PalletScannerManiac(location: Int) extends PalletSelector {
 
   val scanner = Scanner(location)

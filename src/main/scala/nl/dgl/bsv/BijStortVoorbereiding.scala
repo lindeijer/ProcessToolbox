@@ -40,8 +40,8 @@ class BijStortVoorbereiding(implicit aPalletSelector: PalletSelector, aVesselSel
       xnge.put(LoGcEs.Product, product)
     }) ~>
       Select(Pallets Where LoGcEs.Product) ~>
-      Step(BsvSetupTransferIngredientFromAnyPalletToBsvPallet) ~> //
-      Step(TransferItemsBetweenPallets) ~> //
+      Step(BsvSetupTransferIngredientFromAnyPalletToBsvPallet) ~>
+      Step(TransferItemsBetweenPallets) ~>
       Select(VitamineBakken Where LoGcEs.Product) ~>
       Step(BsvSetupTransferIngredientFromAnyVesselToBsvVessel) ~>
       Step(TransferProductBetweenVessels) ~>

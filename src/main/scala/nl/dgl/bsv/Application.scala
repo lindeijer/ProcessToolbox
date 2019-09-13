@@ -25,6 +25,10 @@ import nl.dgl.ptb.dsl.StepConstructionHelper
 import nl.dgl.ptb.dsl.ExchangeHashMap
 import org.apache.tinkerpop.shaded.minlog.Log
 import nl.dgl.logces.LoGcEs
+import scala.util.Success
+import scala.concurrent.ExecutionContext
+import ExecutionContext.Implicits.global
+import nl.dgl.logces.PalletScannerLoser
 
 object MES_4C_LIENT extends Frame with App {
 
@@ -65,7 +69,7 @@ object MES_4C_LIENT extends Frame with App {
 
   // runtime
 
-  implicit val aPalletScanner = PalletScannerManiac(0)
+  implicit val aPalletScanner = PalletScannerLoser(0) // PalletScannerManiac(0)
   implicit val aVesselScanner = VesselScannerLoser(0);
   // implicit val scale0 = Scale(0)
 
@@ -87,17 +91,15 @@ object MES_4C_LIENT extends Frame with App {
 
   // xnge.put(Scale, Scale(0))
   xnge.put(AmountMarginPercent, 10.0)
-  val xngeResult = bsv.process(xnge)
-
-  // result
-
-  println("TransferItemCountBetweenPallets=" + xngeResult.get(TransferItemsBetweenPallets.Count))
-  println("BijstortScoopAmount=" + xngeResult.get(TransferProductBetweenVessels.AmountActual))
-
-  println("SrcVessel=" + xngeResult.get[Vessel](LoGcEs.SrcVessel))
-  println("DstVessel=" + xngeResult.get[Vessel](LoGcEs.DstVessel))
-
-  println("bijstortResultaten=" + xngeResult.get[Map[Any, Any]](BSV.BijstortResultaaten))
+  bsv.apply(xnge).andThen({
+    case Success(xngeResult) => {
+      println("TransferItemCountBetweenPallets=" + xngeResult.get(TransferItemsBetweenPallets.Count))
+      println("BijstortScoopAmount=" + xngeResult.get(TransferProductBetweenVessels.AmountActual))
+      println("SrcVessel=" + xngeResult.get[Vessel](LoGcEs.SrcVessel))
+      println("DstVessel=" + xngeResult.get[Vessel](LoGcEs.DstVessel))
+      println("bijstortResultaten=" + xngeResult.get[Map[Any, Any]](BSV.BijstortResultaaten))
+    }
+  })
 
 }
 
@@ -118,16 +120,20 @@ object MES_4CLIENT_RESTART extends Frame with App {
   // val xnge = new ExchangeGremlin(19);
   val xnge = new ExchangeHashMap()
 
-  val xngeResult = bsv.process(xnge)
+  bsv.apply(xnge).andThen({
+    case Success(xngeResult) => {
+      println("TransferItemCountBetweenPallets=" + xngeResult.get(TransferItemsBetweenPallets.Count))
+      println("BijstortScoopAmount=" + xngeResult.get(TransferProductBetweenVessels.AmountActual))
+
+      println("SrcVessel=" + xngeResult.get[Vessel](LoGcEs.SrcVessel))
+      println("DstVessel=" + xngeResult.get[Vessel](LoGcEs.DstVessel))
+
+      println("bijstortResultaten=" + xngeResult.get[Map[Any, Any]](BSV.BijstortResultaaten))
+
+    }
+
+  })
 
   // result
-
-  println("TransferItemCountBetweenPallets=" + xngeResult.get(TransferItemsBetweenPallets.Count))
-  println("BijstortScoopAmount=" + xngeResult.get(TransferProductBetweenVessels.AmountActual))
-
-  println("SrcVessel=" + xngeResult.get[Vessel](LoGcEs.SrcVessel))
-  println("DstVessel=" + xngeResult.get[Vessel](LoGcEs.DstVessel))
-
-  println("bijstortResultaten=" + xngeResult.get[Map[Any, Any]](BSV.BijstortResultaaten))
 
 }
