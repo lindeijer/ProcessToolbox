@@ -2,16 +2,16 @@ package nl.dgl.ptb.ui.swing
 
 import nl.dgl.ptb.dsl.Process
 import nl.dgl.ptb.dsl.StepSequential
-import nl.dgl.ptb.dsl.Step
+import nl.dgl.ptb.dsl.Action
 import com.mxgraph.view.mxGraph
 import com.mxgraph.swing.mxGraphComponent
 import com.mxgraph.layout.hierarchical.mxHierarchicalLayout
-import nl.dgl.ptb.dsl.StepEvent
+import nl.dgl.ptb.dsl.ActionEvent
 import scala.collection.mutable.ListBuffer
 import scala.collection.mutable.HashMap
 import com.mxgraph.model.mxCell
-import nl.dgl.ptb.dsl.StepStarted
-import nl.dgl.ptb.dsl.StepFinished
+import nl.dgl.ptb.dsl.ActionStarted
+import nl.dgl.ptb.dsl.ActionFinished
 import nl.dgl.ptb.dsl.StepSplit
 import nl.dgl.ptb.dsl.StepSelect
 import com.mxgraph.util.mxEventSource
@@ -32,7 +32,7 @@ import scala.concurrent.duration._
 import scala.collection.mutable.ListBuffer
 import scala.swing.BoxPanel
 import scala.swing.Orientation
-import nl.dgl.ptb.dsl.StepAsync
+import nl.dgl.ptb.dsl.BasicAction
 
 /**
  * A view upon the process state, where each step has a state.
@@ -43,8 +43,8 @@ class ProcessStateView(topProcess: Process) extends BoxPanel(Orientation.Vertica
     override def convertValueToString(x: Any): String = {
       if (x.isInstanceOf[mxCell]) {
         val cell = x.asInstanceOf[mxCell]
-        if (cell.getValue.isInstanceOf[Step]) {
-          val step = cell.getValue.asInstanceOf[Step]
+        if (cell.getValue.isInstanceOf[Action]) {
+          val step = cell.getValue.asInstanceOf[Action]
           return step.getClass.getSimpleName + "@" + step.index
         }
       }
@@ -81,8 +81,8 @@ class ProcessStateView(topProcess: Process) extends BoxPanel(Orientation.Vertica
     val addedCell = addedCells(0).asInstanceOf[mxCell]
     val addedCellValue = addedCell.getValue
     addedCellValue match {
-      case valueIsStep: Step => {
-        setStepViewContents(newStepViewContents(valueIsStep.asInstanceOf[Step]))
+      case valueIsStep: Action => {
+        setStepViewContents(newStepViewContents(valueIsStep.asInstanceOf[Action]))
       }
       case valueIsString: String => {
         setStepViewContents(new Label("[" + valueIsString + "]"))
@@ -91,7 +91,7 @@ class ProcessStateView(topProcess: Process) extends BoxPanel(Orientation.Vertica
     processViewListeners.foreach(_.apply())
   }
 
-  def newStepViewContents(step: Step): Component = {
+  def newStepViewContents(step: Action): Component = {
     step match {
       case StepSelect(_, index) => newStepSelectViewContents(step.asInstanceOf[StepSelect[_]])
       case _                    => new Label("[[" + step.toString() + "]]")
@@ -146,7 +146,7 @@ class ProcessStateView(topProcess: Process) extends BoxPanel(Orientation.Vertica
 
   /////////////////////////////////////////////
 
-  def viewStep(step: Step, vParent: Any, isBefore: Boolean): Object = { // mxCell
+  def viewStep(step: Action, vParent: Any, isBefore: Boolean): Object = { // mxCell
     step match {
       case StepSequential(before, after, index) => {
         // println("ProcessSwingView.viewStep: StepSequential; isBefore=" + isBefore)
@@ -155,7 +155,7 @@ class ProcessStateView(topProcess: Process) extends BoxPanel(Orientation.Vertica
         graph.insertEdge(vParent, null, "~>", vBefore, vAfter);
         if (isBefore) return vAfter else return vBefore
       }
-      case StepAsync(f, index) => {
+      case BasicAction(f, index) => {
         // println("ProcessSwingView.viewStep: StepFunction; isBefore=" + isBefore)
         val vFunc = graph.insertVertex(vParent, f.getClass.getSimpleName, step, 0, 0, 80, 30, "fillColor=green");
         vertexes += vFunc.asInstanceOf[mxCell]
@@ -202,18 +202,18 @@ class ProcessStateView(topProcess: Process) extends BoxPanel(Orientation.Vertica
     }
   }
 
-  def notifyStepChanged(stepEvent: StepEvent): Unit = {
+  def notifyStepChanged(stepEvent: ActionEvent): Unit = {
     stepEvent match {
-      case StepStarted(step, instant) => {
+      case ActionStarted(step, instant) => {
         setStepViewStyle(step, "fillColor=yellow")
       }
-      case StepFinished(step, instant) => {
+      case ActionFinished(step, instant) => {
         setStepViewStyle(step, "fillColor=blue")
       }
     }
   }
 
-  def setStepViewStyle(step: Step, style: String) {
+  def setStepViewStyle(step: Action, style: String) {
     vertexes.filter(_.getValue.equals(step)).foreach(vertex => {
       println("step=" + step + ",vertex=" + vertex)
       graph.setCellStyle(style, Array(vertex))

@@ -17,11 +17,11 @@ object DSL {
   val Selection = "Selection"
 }
 
-case class StepSelect[T] private (filter: SelectFilter[T], i: Int)(implicit selector: Selector[T]) extends Step(i) {
+case class StepSelect[T] private (filter: SelectFilter[T], i: Int)(implicit selector: Selector[T]) extends Action(i) {
 
   def this(filter: SelectFilter[T])(implicit selector: Selector[T]) = this(filter, StepConstructionHelper.counter.incrementAndGet())
 
-  def split: Step = {
+  def split: Action = {
     println("StepSelect.split: NOT CLONED filter=" + filter)
     StepSelect(filter, StepConstructionHelper.counter.incrementAndGet())
   }

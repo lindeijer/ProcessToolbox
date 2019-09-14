@@ -2,7 +2,7 @@ package nl.dgl.logces
 
 import java.time.Instant
 import scala.Vector
-import nl.dgl.ptb.dsl.Step
+import nl.dgl.ptb.dsl.Action
 import nl.dgl.ptb.dsl.Exchange
 
 case class Scanner(location: Int) {

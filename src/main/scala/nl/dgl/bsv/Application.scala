@@ -82,8 +82,8 @@ object MES_4C_LIENT extends Frame with App {
 
   // xnge
 
-  val xnge = // new ExchangeHashMap()
-    new ExchangeGremlin();
+  val xnge = new ExchangeHashMap()
+  // new ExchangeGremlin();
 
   println("!!!!!!!!!!!!!!!!!! xnge.index=" + xnge.getStepIndex())
 
@@ -92,7 +92,7 @@ object MES_4C_LIENT extends Frame with App {
 
   // xnge.put(Scale, Scale(0))
   xnge.put(AmountMarginPercent, 10.0)
-  bsv.apply(xnge).andThen({
+  bsv.start(xnge).andThen({
     case Success(xngeResult) => {
       println("TransferItemCountBetweenPallets=" + xngeResult.get(TransferItemsBetweenPallets.Count))
       println("BijstortScoopAmount=" + xngeResult.get(TransferProductBetweenVessels.AmountActual))
@@ -121,7 +121,7 @@ object MES_4CLIENT_RESTART extends Frame with App {
   // val xnge = new ExchangeGremlin(19);
   val xnge = new ExchangeHashMap()
 
-  bsv.apply(xnge).andThen({
+  bsv.start(xnge).andThen({
     case Success(xngeResult) => {
       println("TransferItemCountBetweenPallets=" + xngeResult.get(TransferItemsBetweenPallets.Count))
       println("BijstortScoopAmount=" + xngeResult.get(TransferProductBetweenVessels.AmountActual))

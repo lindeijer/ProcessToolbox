@@ -1,37 +1,26 @@
 package nl.dgl.bsv
 
-import java.util.HashMap
-import java.time.Instant
 import java.util.UUID
-import java.util.ArrayList
-import scala.collection.mutable.ListBuffer
-import scala.util.Random
-import nl.dgl.ptb.dsl.Exchange
-import nl.dgl.ptb.dsl.Select
+
+import nl.dgl.logces.LoGcEs
 import nl.dgl.logces.Pallet
+import nl.dgl.logces.PalletSelector
 import nl.dgl.logces.Pallets
-import nl.dgl.logces.Article
-import nl.dgl.ptb.dsl.Step
-import nl.dgl.ptb.dsl.Process
-import nl.dgl.logces.Scanner
 import nl.dgl.logces.Product
 import nl.dgl.logces.TransferItemsBetweenPallets
 import nl.dgl.logces.TransferProductBetweenVessels
-import nl.dgl.logces.PalletScanner
-import nl.dgl.logces.PalletSelector
-import nl.dgl.logces.Lot
 import nl.dgl.logces.Vessel
-import nl.dgl.logces.Scale
-import nl.dgl.logces.TransferProductBetweenVessels.AmountMarginPercent
-import nl.dgl.logces.Vessels
-import nl.dgl.ptb.dsl.Split
-import nl.dgl.ptb.dsl.SelectSource
-import nl.dgl.ptb.dsl.SelectFilter
 import nl.dgl.logces.VesselSelectFiler
-import nl.dgl.ptb.dsl.Selector
 import nl.dgl.logces.VesselSelector
-import nl.dgl.logces.LoGcEs
+import nl.dgl.logces.Vessels
 import nl.dgl.ptb.dsl.DSL
+import nl.dgl.ptb.dsl.Exchange
+import nl.dgl.ptb.dsl.Process
+import nl.dgl.ptb.dsl.Select
+import nl.dgl.ptb.dsl.SelectFilter
+import nl.dgl.ptb.dsl.SelectSource
+import nl.dgl.ptb.dsl.Split
+import nl.dgl.ptb.dsl.Step
 
 class BijStortVoorbereiding(implicit aPalletSelector: PalletSelector, aVesselSelector: VesselSelector) extends Process({ //
   Split(BSV.Bijstort, Process { //

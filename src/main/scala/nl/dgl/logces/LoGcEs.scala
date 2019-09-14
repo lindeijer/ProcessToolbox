@@ -3,7 +3,7 @@ package nl.dgl.logces
 import scala.collection.mutable.ListBuffer
 import scala.util.Random
 import nl.dgl.ptb.dsl.Exchange
-import nl.dgl.ptb.dsl.Step
+import nl.dgl.ptb.dsl.Action
 import nl.dgl.ptb.dsl.Selector
 
 object LoGcEs {
