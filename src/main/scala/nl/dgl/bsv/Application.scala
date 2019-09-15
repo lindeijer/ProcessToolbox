@@ -5,7 +5,6 @@ import nl.dgl.logces.Article
 import nl.dgl.logces.Pallet
 import nl.dgl.ptb.dsl.Exchange
 import nl.dgl.logces.PalletSelector
-import nl.dgl.logces.PalletScanner
 import nl.dgl.logces.TransferItemsBetweenPallets
 import nl.dgl.logces.TransferProductBetweenVessels
 import nl.dgl.logces.Vessel

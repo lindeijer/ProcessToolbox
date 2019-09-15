@@ -5,6 +5,9 @@ import scala.util.Random
 import nl.dgl.ptb.dsl.Exchange
 import nl.dgl.ptb.dsl.Action
 import nl.dgl.ptb.dsl.Selector
+import java.util.concurrent._
+import gremlin.scala.label
+import scala.concurrent.Promise
 
 object LoGcEs {
 
@@ -30,70 +33,16 @@ object TransferItemsBetweenPallets extends (Exchange => Unit) {
 
 // ----
 
-trait PalletSelector extends Selector[Pallet] {
-  //def selectThePalletWithId(palletId: String): Pallet
-  //def selectAnyPalletWithProduct(product: Product): Pallet
-}
-
-object PalletSelector {}
-
-// ----
-
-class PalletScanner(location: Int) extends PalletSelector {
-
-  val scanner = Scanner(location)
-
-  def selectThePalletWithId(palletId: String): Pallet = {
-    println("PalletScanner: will scan a pallet with id=" + palletId)
-    selectWithId(palletId, scanner.scan())
-  }
-
-  private def selectWithId(palletId: String, scanEvent: ScannerEvent): Pallet = {
-    if (scanEvent.code.equals(palletId)) {
-      return Pallet(palletId)
-    } else {
-      println("PalletScanner: not the right id, required " + palletId + " but found barcode " + scanEvent.code)
-      selectWithId(palletId, scanner.scan())
-    }
-  }
-
-  def selectAnyPalletWithProduct(product: Product): Pallet = {
-    println("PalletScanner: will scan a pallet with " + product)
-    selectWithProduct(product, scanner.scan())
-  }
-
-  private def selectWithProduct(product: Product, scanEvent: ScannerEvent): Pallet = {
-    if (Pallet.isCode(scanEvent.code)) {
-      val pallet = Pallet(scanEvent.code)
-      if (pallet.article.product.equals(product)) {
-        return pallet
-      } else {
-        println("PalletScanner: not the right product, required " + product + " but found pallet with " + pallet.article.product)
-        selectWithProduct(product, scanner.scan())
-      }
-    } else {
-      println("PalletScanner: not a pallet code=" + scanEvent.code)
-      selectWithProduct(product, scanner.scan())
-    }
-  }
-}
-
-object PalletScanner {
-
-  def apply(location: Int) = {
-    new PalletScanner(location)
-  }
-}
-
-// =====================================
-
-import java.util.concurrent._
-import gremlin.scala.label
+trait PalletSelector extends Selector[Pallet]
 
 /**
  * This loser never scans a pallet
  */
 case class PalletScannerLoser(location: Int) extends PalletSelector {
+
+  override def select(candidates: List[Pallet], selectionPromise: Promise[Pallet]) = {
+    // the loser never fulfills his promise.
+  }
 
 }
 
@@ -101,22 +50,23 @@ case class PalletScannerManiac(location: Int) extends PalletSelector {
 
   val scanner = Scanner(location)
 
-  def init() = {
-    val ex = new ScheduledThreadPoolExecutor(1)
-    val task = new Runnable {
-      def run() = {
-        val selectedPallet = selectAnyPellet()
-        // println("selectedPallet=" + selectedPallet)
-        listeners.foreach(_.apply(selectedPallet))
+  val ex = new ScheduledThreadPoolExecutor(1)
+
+  override def select(candidates: List[Pallet], selectionPromise: Promise[Pallet]) = {
+    val task: Runnable = new Runnable {
+      def run(): Unit = {
+        val selectedPallet = selectAnyPellet(scanner.scan())
+        if (selectionPromise.isCompleted) {
+          return
+        }
+        if (candidates.contains(selectedPallet)) {
+          selectionPromise.success(selectedPallet)
+          return
+        }
+        select(candidates, selectionPromise);
       }
     }
-    val f = ex.scheduleAtFixedRate(task, 1, 5, TimeUnit.SECONDS)
-  }
-
-  init()
-
-  private def selectAnyPellet(): Pallet = {
-    selectAnyPellet(scanner.scan())
+    ex.schedule(task, 5, TimeUnit.SECONDS)
   }
 
   private def selectAnyPellet(scanEvent: ScannerEvent): Pallet = {
@@ -160,5 +110,9 @@ object TransferProductBetweenVessels extends (Exchange => Unit) {
 trait VesselSelector extends Selector[Vessel] {}
 
 case class VesselScannerLoser(location: Int) extends VesselSelector {
+
+  override def select(candidates: List[Vessel], selectionPromise: Promise[Vessel]) = {
+    // the loser never fulfills his promise.
+  }
 
 }

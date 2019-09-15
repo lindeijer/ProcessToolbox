@@ -8,7 +8,7 @@ import scala.collection.mutable.ListBuffer
 import java.time.Instant
 
 trait Selector[T] {
-  val listeners: ListBuffer[Any => Unit] = ListBuffer.empty
+  def select(candidates: List[T], selectionPromise: Promise[T])
 }
 
 object DSL {
@@ -27,11 +27,11 @@ case class StepSelect[T] private (filter: SelectFilter[T], i: Int)(implicit sele
   }
 
   // selectionFuture because the selection will occur in the future
-  val selectionPromise = Promise[Any]()
+  val selectionPromise = Promise[T]()
   val selectionFuture = selectionPromise.future
 
   // candidatesPromise because we will know about the candidates when the xnge arrives.
-  val candidatesPromise = Promise[List[Any]]()
+  val candidatesPromise = Promise[List[T]]()
   val candidatesFuture = candidatesPromise.future
 
   override def f(xnge: Exchange): Future[Exchange] = {
@@ -39,26 +39,19 @@ case class StepSelect[T] private (filter: SelectFilter[T], i: Int)(implicit sele
     val candidates = filter.candidates(xnge)
     candidatesPromise.success(candidates)
 
-    def notifySelection(selection: Any) = {
-      if (candidates.contains(selection)) {
-        selectionPromise.success(selection)
-      }
-    }
-    selector.listeners += notifySelection
-
-    // start listening to the selector. The UI may select as well.
+    // ask the selector to select one of the candidates
+    // note: the user can select as well via the UI
+    selector.select(candidates, selectionPromise)
 
     val xngePromise = Promise[Exchange]()
 
-    selectionFuture.andThen({
+    selectionFuture.andThen({ // may be completed by the selector or by user via the UI.
       case Success(selection) => {
         xnge.put(DSL.Selection, selection)
         xngePromise.success(xnge)
-        selector.listeners -= notifySelection
       }
       case Failure(cause) =>
         xngePromise.failure(cause)
-        selector.listeners -= notifySelection
     })
 
     return xngePromise.future;
@@ -69,7 +62,7 @@ case class StepSelect[T] private (filter: SelectFilter[T], i: Int)(implicit sele
 /**
  * Sets Select(ion) on Exchange
  */
-object Select { // IU presents the list to select from, selector does it some other way
+object Select { // The UI presents the list to the user to select from, the selector does it some other way
   def apply[T](filter: SelectFilter[T])(implicit selector: Selector[T]) = {
     new StepSelect(filter)
   }
