@@ -1,7 +1,7 @@
 package nl.dgl.ptb.ui.swing
 
 import nl.dgl.ptb.dsl.Process
-import nl.dgl.ptb.dsl.StepSequential
+import nl.dgl.ptb.dsl.ActionSequential
 import nl.dgl.ptb.dsl.Action
 import com.mxgraph.view.mxGraph
 import com.mxgraph.swing.mxGraphComponent
@@ -12,8 +12,8 @@ import scala.collection.mutable.HashMap
 import com.mxgraph.model.mxCell
 import nl.dgl.ptb.dsl.ActionStarted
 import nl.dgl.ptb.dsl.ActionFinished
-import nl.dgl.ptb.dsl.StepSplit
-import nl.dgl.ptb.dsl.StepSelect
+import nl.dgl.ptb.dsl.ActionSplit
+import nl.dgl.ptb.dsl.ActionSelect
 import com.mxgraph.util.mxEventSource
 import com.mxgraph.util.mxEventObject
 import com.mxgraph.util.mxEvent
@@ -93,8 +93,8 @@ class ProcessStateView(topProcess: Process) extends BoxPanel(Orientation.Vertica
 
   def newStepViewContents(step: Action): Component = {
     step match {
-      case StepSelect(_, index) => newStepSelectViewContents(step.asInstanceOf[StepSelect[_]])
-      case _                    => new Label("[[" + step.toString() + "]]")
+      case ActionSelect(_, index) => newStepSelectViewContents(step.asInstanceOf[ActionSelect[_]])
+      case _                      => new Label("[[" + step.toString() + "]]")
     }
 
   }
@@ -102,7 +102,7 @@ class ProcessStateView(topProcess: Process) extends BoxPanel(Orientation.Vertica
   import scala.concurrent.duration._
   import scala.util.{ Try, Success, Failure }
 
-  def newStepSelectViewContents[T](stepSelect: StepSelect[T]): Component = {
+  def newStepSelectViewContents[T](stepSelect: ActionSelect[T]): Component = {
     Try(Await.result(stepSelect.candidatesFuture, 1 second)) match {
       case Success(candidates) => {
         val stepSelectComboBox = new ComboBox(candidates);
@@ -148,7 +148,7 @@ class ProcessStateView(topProcess: Process) extends BoxPanel(Orientation.Vertica
 
   def viewStep(step: Action, vParent: Any, isBefore: Boolean): Object = { // mxCell
     step match {
-      case StepSequential(before, after, index) => {
+      case ActionSequential(before, after, index) => {
         // println("ProcessSwingView.viewStep: StepSequential; isBefore=" + isBefore)
         val vBefore = viewStep(before, vParent, isBefore = true);
         val vAfter = viewStep(after, vParent, isBefore = false);
@@ -168,12 +168,12 @@ class ProcessStateView(topProcess: Process) extends BoxPanel(Orientation.Vertica
         viewStep(top, vProcess, isBefore)
         return vProcess
       }
-      case StepSplit(splitListKey, splitItemKey, splitItemResultKey, splitResultsKey, stepToSplit, index) => {
+      case ActionSplit(splitListKey, splitItemKey, splitItemResultKey, splitResultsKey, stepToSplit, index) => {
         // println("ProcessSwingView.viewStep: StepSplit; splitListKey=" + splitListKey + ",isBefore=" + isBefore)
         val vStepSplit = graph.insertVertex(vParent, "Split@" + step.index, step, 0, 0, 80, 30, "fillColor=green");
         vertexes += vStepSplit.asInstanceOf[mxCell]
         val vStepToSplit = viewStep(stepToSplit, vStepSplit, isBefore)
-        step.asInstanceOf[StepSplit].futureSteps andThen {
+        step.asInstanceOf[ActionSplit].futureSteps andThen {
           case Success(stepsForSplit) => {
             graph.getModel().beginUpdate();
             graph.cellsRemoved(Array(vStepToSplit))
@@ -187,7 +187,7 @@ class ProcessStateView(topProcess: Process) extends BoxPanel(Orientation.Vertica
         }
         return vStepSplit
       }
-      case StepSelect(filter, index) => {
+      case ActionSelect(filter, index) => {
         // println("ProcessSwingView.viewStep: StepSelect; filter=" + filter + ",isBefore=" + isBefore)
         val vStepSelect = graph.insertVertex(vParent, "Select@" + step.index, step, 0, 0, 80, 30, "fillColor=green");
         vertexes += vStepSelect.asInstanceOf[mxCell]

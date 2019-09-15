@@ -27,11 +27,11 @@ abstract class Action(val index: Int) {
   def split(): Action
 
   def ~>(next: Action): Action = {
-    new StepSequential(this, next);
+    new ActionSequential(this, next);
   }
 
-  def &&(next: Action): StepConcurrent = {
-    new StepConcurrent(this, next)
+  def &&(next: Action): ActionConcurrent = {
+    new ActionConcurrent(this, next)
   }
 
   def f(xnge: Exchange): Future[Exchange] = ???

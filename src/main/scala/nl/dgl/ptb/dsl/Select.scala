@@ -17,13 +17,13 @@ object DSL {
   val Selection = "Selection"
 }
 
-case class StepSelect[T] private (filter: SelectFilter[T], i: Int)(implicit selector: Selector[T]) extends Action(i) {
+case class ActionSelect[T] private (filter: SelectFilter[T], i: Int)(implicit selector: Selector[T]) extends Action(i) {
 
   def this(filter: SelectFilter[T])(implicit selector: Selector[T]) = this(filter, StepConstructionHelper.counter.incrementAndGet())
 
   def split: Action = {
     println("StepSelect.split: NOT CLONED filter=" + filter)
-    StepSelect(filter, StepConstructionHelper.counter.incrementAndGet())
+    ActionSelect(filter, StepConstructionHelper.counter.incrementAndGet())
   }
 
   // selectionFuture because the selection will occur in the future
@@ -64,7 +64,7 @@ case class StepSelect[T] private (filter: SelectFilter[T], i: Int)(implicit sele
  */
 object Select { // The UI presents the list to the user to select from, the selector does it some other way
   def apply[T](filter: SelectFilter[T])(implicit selector: Selector[T]) = {
-    new StepSelect(filter)
+    new ActionSelect(filter)
   }
 }
 

@@ -56,7 +56,7 @@ object Process {
 
 // ------
 
-case class StepConcurrent private (a: Action, b: Action, i: Int) extends Action(i) {
+case class ActionConcurrent private (a: Action, b: Action, i: Int) extends Action(i) {
 
   def this(a: Action, b: Action) = this(a, b, StepConstructionHelper.counter.getAndIncrement)
 
@@ -68,13 +68,13 @@ case class StepConcurrent private (a: Action, b: Action, i: Int) extends Action(
 
 }
 
-case class StepSequential private (val a: Action, val b: Action, i: Int) extends Action(i) {
+case class ActionSequential private (val a: Action, val b: Action, i: Int) extends Action(i) {
 
   def this(a: Action, b: Action) = this(a, b, StepConstructionHelper.counter.getAndIncrement)
 
   def split(): Action = {
     println("StepSequential.split: a=" + a + ",b=" + b)
-    StepSequential(a.split, b.split, StepConstructionHelper.counter.getAndIncrement())
+    ActionSequential(a.split, b.split, StepConstructionHelper.counter.getAndIncrement())
   }
 
   override def start(xnge: Exchange): Future[Exchange] = {
@@ -97,7 +97,7 @@ case class StepSequential private (val a: Action, val b: Action, i: Int) extends
 
 }
 
-class StepChoice private (steps: Vector[Action], chooser: String, i: Int) extends Action(i) {
+class ActionChoice private (steps: Vector[Action], chooser: String, i: Int) extends Action(i) {
 
   def this(steps: Vector[Action], chooser: String) = this(steps, chooser, StepConstructionHelper.counter.getAndIncrement)
 
@@ -109,7 +109,7 @@ class StepChoice private (steps: Vector[Action], chooser: String, i: Int) extend
 
 //wow, check out https://github.com/S-Mach/s_mach.concurrent
 
-case class StepSplit private (splitListKey: String, splitItemKey: String, splitItemResultKey: String, splitResultsKey: String, stepToSplit: Action, i: Int) extends Action(i) {
+case class ActionSplit private (splitListKey: String, splitItemKey: String, splitItemResultKey: String, splitResultsKey: String, stepToSplit: Action, i: Int) extends Action(i) {
 
   def this(splitListKey: String, splitItemKey: String, splitItemResultKey: String, splitResultsKey: String, stepToSplit: Action) = this(splitListKey, splitItemKey, splitItemResultKey, splitResultsKey, stepToSplit, StepConstructionHelper.counter.getAndIncrement)
 
@@ -173,12 +173,12 @@ case class StepSplit private (splitListKey: String, splitItemKey: String, splitI
 
 object Split {
 
-  def apply(splitListKey: String, splitItemKey: String, splitItemResultKey: String, splitResultsKey: String, step: Action): StepSplit = {
-    return new StepSplit(splitListKey, splitItemKey, splitItemResultKey, splitResultsKey, step)
+  def apply(splitListKey: String, splitItemKey: String, splitItemResultKey: String, splitResultsKey: String, step: Action): ActionSplit = {
+    return new ActionSplit(splitListKey, splitItemKey, splitItemResultKey, splitResultsKey, step)
   }
 
-  def apply(splitItemKey: String, step: Action): StepSplit = {
-    return new StepSplit(splitItemKey + "List", splitItemKey, splitItemKey + "Result", splitItemKey + "ResultList", step)
+  def apply(splitItemKey: String, step: Action): ActionSplit = {
+    return new ActionSplit(splitItemKey + "List", splitItemKey, splitItemKey + "Result", splitItemKey + "ResultList", step)
   }
 
 }
