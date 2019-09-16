@@ -28,6 +28,8 @@ import scala.util.Success
 import scala.concurrent.ExecutionContext
 import ExecutionContext.Implicits.global
 import nl.dgl.logces.PalletScannerLoser
+import nl.dgl.ptb.dsl.DSL
+import nl.dgl.logces.LogisticLocation
 
 object MES_4C_LIENT extends Frame with App {
 
@@ -68,9 +70,11 @@ object MES_4C_LIENT extends Frame with App {
 
   // runtime
 
-  implicit val aPalletScanner = PalletScannerLoser(0) // PalletScannerManiac(0)
-  implicit val aVesselScanner = VesselScannerLoser(0);
-  // implicit val scale0 = Scale(0)
+  val vitamineHal = LogisticLocation("VitamineHal")
+
+  val aPalletScanner = PalletScannerLoser(vitamineHal) //PalletScannerManiac(vitamineHal)
+
+  val aVesselScanner = VesselScannerLoser(vitamineHal);
 
   val bsv = new BijStortVoorbereiding();
   val bsvView = new ProcessOverView(bsv);
@@ -83,6 +87,8 @@ object MES_4C_LIENT extends Frame with App {
 
   val xnge = new ExchangeHashMap()
   // new ExchangeGremlin();
+
+  xnge.put(DSL.Location, vitamineHal)
 
   println("!!!!!!!!!!!!!!!!!! xnge.index=" + xnge.getStepIndex())
 
@@ -107,8 +113,10 @@ object MES_4CLIENT_RESTART extends Frame with App {
 
   title = "BijStortVoorbereiding - RESTART"
 
-  implicit val aPalletScanner = PalletScannerManiac(0)
-  implicit val aVesselScanner = VesselScannerLoser(0);
+  val vitamineHal = LogisticLocation("VitamineHal")
+
+  val aPalletScanner = PalletScannerManiac(vitamineHal)
+  val aVesselScanner = VesselScannerLoser(vitamineHal);
 
   val bsv = new BijStortVoorbereiding();
   val bsvView = new ProcessOverView(bsv);

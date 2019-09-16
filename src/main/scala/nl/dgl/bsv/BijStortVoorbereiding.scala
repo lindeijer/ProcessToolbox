@@ -22,7 +22,7 @@ import nl.dgl.ptb.dsl.SelectSource
 import nl.dgl.ptb.dsl.Split
 import nl.dgl.ptb.dsl.Step
 
-class BijStortVoorbereiding(implicit aPalletSelector: PalletSelector, aVesselSelector: VesselSelector) extends Process({ //
+class BijStortVoorbereiding extends Process({ //
   Split(BSV.Bijstort, Process { //
     Step(xnge => {
       val product = xnge.get[Ingedient](BSV.Bijstort).product

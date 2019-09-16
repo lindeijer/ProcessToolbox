@@ -117,6 +117,8 @@ class PalletSelectFiler(source: SelectSource[Pallet], xngeKey: String) extends S
       case _                => return candidates
     }
   }
+
+  def getSelectType(): Class[Pallet] = classOf[Pallet]
 }
 
 object Pallets extends SelectSource[Pallet] {
@@ -215,6 +217,10 @@ class VesselSelectFiler(source: SelectSource[Vessel], xngeKey: String) extends S
       case article: Product => return candidates.filter(_.product.equals(article))
       case _                => return candidates
     }
+  }
+
+  def getSelectType(): Class[Vessel] = {
+    classOf[Vessel]
   }
 }
 

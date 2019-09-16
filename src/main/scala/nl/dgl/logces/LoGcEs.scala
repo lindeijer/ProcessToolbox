@@ -8,6 +8,7 @@ import nl.dgl.ptb.dsl.Selector
 import java.util.concurrent._
 import gremlin.scala.label
 import scala.concurrent.Promise
+import nl.dgl.ptb.dsl.Location
 
 object LoGcEs {
 
@@ -33,22 +34,30 @@ object TransferItemsBetweenPallets extends (Exchange => Unit) {
 
 // ----
 
-trait PalletSelector extends Selector[Pallet]
+trait PalletSelector extends Selector[Pallet] {
+
+  override def getSelectType() = classOf[Pallet]
+
+}
 
 /**
  * This loser never scans a pallet
  */
-case class PalletScannerLoser(location: Int) extends PalletSelector {
+case class PalletScannerLoser(location: LogisticLocation) extends PalletSelector {
 
   override def select(candidates: List[Pallet], selectionPromise: Promise[Pallet]) = {
     // the loser never fulfills his promise.
   }
 
+  override def getSelectLocation() = location
+
 }
 
-case class PalletScannerManiac(location: Int) extends PalletSelector {
+case class PalletScannerManiac(location: LogisticLocation) extends PalletSelector {
 
   val scanner = Scanner(location)
+
+  override def getSelectLocation() = location
 
   val ex = new ScheduledThreadPoolExecutor(1)
 
@@ -107,12 +116,18 @@ object TransferProductBetweenVessels extends (Exchange => Unit) {
 
 //////////////
 
-trait VesselSelector extends Selector[Vessel] {}
+trait VesselSelector extends Selector[Vessel] {
 
-case class VesselScannerLoser(location: Int) extends VesselSelector {
+  override def getSelectType() = classOf[Vessel]
+
+}
+
+case class VesselScannerLoser(location: LogisticLocation) extends VesselSelector {
 
   override def select(candidates: List[Vessel], selectionPromise: Promise[Vessel]) = {
     // the loser never fulfills his promise.
   }
+
+  override def getSelectLocation() = location
 
 }
