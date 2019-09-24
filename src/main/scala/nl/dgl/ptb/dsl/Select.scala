@@ -17,8 +17,11 @@ trait Selector[T] {
 
 object Selector {
 
-  def apply[T](selectLocation: Location, selectType: Class[T]): Selector[T] = {
-    location2selectors.get(selectLocation).get(selectType).asInstanceOf[Selector[T]]
+  def apply[T](selectLocation: Location, selectType: Class[T]): Option[Selector[T]] = {
+    for (
+      class2selectors <- location2selectors.get(selectLocation);
+      selector <- class2selectors.get(selectType)
+    ) yield selector.asInstanceOf[Selector[T]]
   }
 
   private val location2selectors = HashMap.empty[Location, HashMap[Class[_], Selector[_]]]
@@ -58,12 +61,11 @@ case class ActionSelect[T] private (filter: SelectFilter[T], i: Int) extends Act
     candidatesPromise.success(candidates)
 
     val selectType = filter.getSelectType()
-    val selectLocation = xnge.get[Location](DSL.Location)
 
-    val selector = Selector(selectLocation, selectType)
-
-    // ask the selector to select one of the candidates
-    selector.select(candidates, selectionPromise)
+    for (
+      selectLocation <- xnge.get[Location](DSL.Location);
+      selector <- Selector(selectLocation, selectType)
+    ) selector.select(candidates, selectionPromise) // ask the selector to select one of the candidates
 
     val xngePromise = Promise[Exchange]()
 

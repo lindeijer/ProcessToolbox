@@ -25,10 +25,11 @@ object TransferItemsBetweenPallets extends (Exchange => Unit) {
   val Count = "Count"
 
   def apply(xnge: Exchange) = {
-    val srcPallet = xnge.get[Pallet](LoGcEs.SrcPallet)
-    val dstPallet = xnge.get[Pallet](LoGcEs.DstPallet)
-    val transferItemsBetweenPalletsCount = xnge.get[Int](TransferItemsBetweenPallets.Count)
-    Pallet.transfer(srcPallet, dstPallet, transferItemsBetweenPalletsCount)
+    for (
+      srcPallet <- xnge.get[Pallet](LoGcEs.SrcPallet);
+      dstPallet <- xnge.get[Pallet](LoGcEs.DstPallet);
+      transferItemsBetweenPalletsCount <- xnge.get[Int](TransferItemsBetweenPallets.Count)
+    ) yield Pallet.transfer(srcPallet, dstPallet, transferItemsBetweenPalletsCount)
   }
 }
 
@@ -98,19 +99,21 @@ object TransferProductBetweenVessels extends (Exchange => Unit) {
   val AmountMarginPercent = "AmountMarginPercent"
 
   def apply(xnge: Exchange) = {
-    val srcVessel = xnge.get[Vessel](LoGcEs.SrcVessel)
-    val dstVessel = xnge.get[Vessel](LoGcEs.DstVessel)
-    val transferAmountTarget = xnge.get[Double](TransferProductBetweenVessels.AmountTarget)
-    val scale = Scale(0) // xnge.get[Scale](Scale)
-    val marginPercent = xnge.get[Double](AmountMarginPercent)
-    //
-    val weighedAmount = scale.weigh(transferAmountTarget, marginPercent).amount
-    println("TransferProductBetweenVessels: transferAmountTarget=" + transferAmountTarget + ",marginPercent=" + marginPercent + ",weighedAmount=" + weighedAmount)
-    xnge.put(TransferProductBetweenVessels.AmountActual, weighedAmount)
-    //
-    println("TransferProductBetweenVessels: before; srcVessel.amount=" + srcVessel.amount + ",dstVessel.amount=" + dstVessel.amount)
-    Vessel.transfer(srcVessel, dstVessel, weighedAmount)
-    println("TransferProductBetweenVessels: after; srcVessel.amount=" + srcVessel.amount + ",dstVessel.amount=" + dstVessel.amount)
+    for (
+      srcVessel <- xnge.get[Vessel](LoGcEs.SrcVessel);
+      dstVessel <- xnge.get[Vessel](LoGcEs.DstVessel);
+      transferAmountTarget <- xnge.get[Double](TransferProductBetweenVessels.AmountTarget);
+      marginPercent <- xnge.get[Double](AmountMarginPercent);
+      scale = Scale(0) // xnge.get[Scale](Scale)
+    ) {
+      val weighedAmount = scale.weigh(transferAmountTarget, marginPercent).amount
+      println("TransferProductBetweenVessels: transferAmountTarget=" + transferAmountTarget + ",marginPercent=" + marginPercent + ",weighedAmount=" + weighedAmount)
+      xnge.put(TransferProductBetweenVessels.AmountActual, weighedAmount)
+      //
+      println("TransferProductBetweenVessels: before; srcVessel.amount=" + srcVessel.amount + ",dstVessel.amount=" + dstVessel.amount)
+      Vessel.transfer(srcVessel, dstVessel, weighedAmount)
+      println("TransferProductBetweenVessels: after; srcVessel.amount=" + srcVessel.amount + ",dstVessel.amount=" + dstVessel.amount)
+    }
   }
 }
 

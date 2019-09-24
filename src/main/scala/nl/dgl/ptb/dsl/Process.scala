@@ -125,7 +125,7 @@ case class ActionSplit private (splitListKey: String, splitItemKey: String, spli
       Future[Exchange](xnge)
     }
     listeners.foreach(_.apply(new ActionStarted(this, Instant.now)))
-    val items = xnge.get[List[Any]](splitListKey)
+    val items = xnge.get[List[Any]](splitListKey).get
     val items2steps = items.map(item => {
       val stepForItem = stepToSplit.split()
       (item, stepForItem)
@@ -137,7 +137,7 @@ case class ActionSplit private (splitListKey: String, splitItemKey: String, spli
     val futuresForItems = items2steps.map(item2step => {
       val item = item2step._1
       val stepForItem = item2step._2
-      val xngeForItem = xnge4this.step(stepForItem.index)
+      val xngeForItem = xnge4this.split(stepForItem.index)
       xngeForItem.put(splitItemKey, item)
       stepForItem.listeners += notifySubStepChanged
       stepForItem.start(xngeForItem).andThen({
@@ -150,8 +150,8 @@ case class ActionSplit private (splitListKey: String, splitItemKey: String, spli
     Future.sequence(futuresForItems).andThen({ // with the list of exchanges from the split steps.
       case Success(xnges) => {
         xnges.foreach(xnge => {
-          val item = xnge.get[Any](splitItemKey)
-          val resultForItem = xnge.get[Any](splitItemResultKey)
+          val item = xnge.get[Any](splitItemKey).get
+          val resultForItem = xnge.get[Any](splitItemResultKey).get
           splitResults.put(item, resultForItem)
         })
         xnge4this.put(splitResultsKey, splitResults.toMap)

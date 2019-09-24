@@ -215,7 +215,7 @@ class ProcessStateView(topProcess: Process) extends BoxPanel(Orientation.Vertica
 
   def setStepViewStyle(step: Action, style: String) {
     vertexes.filter(_.getValue.equals(step)).foreach(vertex => {
-      println("step=" + step + ",vertex=" + vertex)
+      // println("step=" + step + ",vertex=" + vertex)
       graph.setCellStyle(style, Array(vertex))
     })
   }
