@@ -110,7 +110,7 @@ class PalletSelectFiler(source: SelectSource[Pallet], xngeKey: String) extends S
 
   def candidates(xnge: Exchange): List[Pallet] = {
     val candidates = source.candidates(xnge)
-    val xngeValue = xnge.get[Any](xngeKey)
+    val xngeValue = xnge.get[Any](xngeKey).get
     xngeValue match {
       case article: Article => return candidates.filter(_.article.equals(article))
       case product: Product => return candidates.filter(_.article.product.equals(product))
