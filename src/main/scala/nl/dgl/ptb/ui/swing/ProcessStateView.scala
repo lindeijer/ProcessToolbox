@@ -35,7 +35,7 @@ import scala.swing.Orientation
 import nl.dgl.ptb.dsl.BasicAction
 
 /**
- * A view upon the process state, where each step has a state.
+ * A view upon the process state, where each sub-action has a state.
  */
 class ProcessStateView(topProcess: Process) extends BoxPanel(Orientation.Vertical) {
 
@@ -44,8 +44,8 @@ class ProcessStateView(topProcess: Process) extends BoxPanel(Orientation.Vertica
       if (x.isInstanceOf[mxCell]) {
         val cell = x.asInstanceOf[mxCell]
         if (cell.getValue.isInstanceOf[Action]) {
-          val step = cell.getValue.asInstanceOf[Action]
-          return step.getClass.getSimpleName + "@" + step.index
+          val action = cell.getValue.asInstanceOf[Action]
+          return action.getClass.getSimpleName + "@" + action.index
         }
       }
       return super.convertValueToString(x);
@@ -63,38 +63,38 @@ class ProcessStateView(topProcess: Process) extends BoxPanel(Orientation.Vertica
     }
   }
 
-  val stepView = new FlowPanel
+  val actionView = new FlowPanel
 
-  def setStepViewContents(content: Component) {
-    stepView.contents += content;
+  def setActionViewContents(content: Component) {
+    actionView.contents += content;
   }
 
-  setStepViewContents(new Label("Select a Step"))
+  setActionViewContents(new Label("Select a Step"))
 
   def myMxGraphSelectionAdded(added: Collection[_]) {
     // println("added=" + added)
     if (added == null || added.size() != 1) {
       return ;
     }
-    stepView.contents.clear()
+    actionView.contents.clear()
     val addedCells = added.toArray // (0) //
     val addedCell = addedCells(0).asInstanceOf[mxCell]
     val addedCellValue = addedCell.getValue
     addedCellValue match {
-      case valueIsStep: Action => {
-        setStepViewContents(newStepViewContents(valueIsStep.asInstanceOf[Action]))
+      case valueIsAction: Action => {
+        setActionViewContents(newActionViewContents(valueIsAction.asInstanceOf[Action]))
       }
       case valueIsString: String => {
-        setStepViewContents(new Label("[" + valueIsString + "]"))
+        setActionViewContents(new Label("[" + valueIsString + "]"))
       }
     }
     processViewListeners.foreach(_.apply())
   }
 
-  def newStepViewContents(step: Action): Component = {
-    step match {
-      case ActionSelect(_, index) => newStepSelectViewContents(step.asInstanceOf[ActionSelect[_]])
-      case _                      => new Label("[[" + step.toString() + "]]")
+  def newActionViewContents(action: Action): Component = {
+    action match {
+      case ActionSelect(_, index) => newActionSelectViewContents(action.asInstanceOf[ActionSelect[_]])
+      case _                      => new Label("[[" + action.toString() + "]]")
     }
 
   }
@@ -102,17 +102,17 @@ class ProcessStateView(topProcess: Process) extends BoxPanel(Orientation.Vertica
   import scala.concurrent.duration._
   import scala.util.{ Try, Success, Failure }
 
-  def newStepSelectViewContents[T](stepSelect: ActionSelect[T]): Component = {
-    Try(Await.result(stepSelect.candidatesFuture, 1 second)) match {
+  def newActionSelectViewContents[T](actionSelect: ActionSelect[T]): Component = {
+    Try(Await.result(actionSelect.candidatesFuture, 1 second)) match {
       case Success(candidates) => {
-        val stepSelectComboBox = new ComboBox(candidates);
-        listenTo(stepSelectComboBox.selection) // when do we stop listening to this cb?
+        val actionSelectComboBox = new ComboBox(candidates);
+        listenTo(actionSelectComboBox.selection) // when do we stop listening to this cb?
         reactions += {
-          case SelectionChanged(`stepSelectComboBox`) =>
-            stepSelect.selectionPromise.success(stepSelectComboBox.selection.item)
-          // stepSelectComboBox.enabled = false the split-step is not stateless yet
+          case SelectionChanged(`actionSelectComboBox`) =>
+            actionSelect.selectionPromise.success(actionSelectComboBox.selection.item)
+          // actionSelectComboBox.enabled = false the split-action is not stateless yet
         }
-        return stepSelectComboBox
+        return actionSelectComboBox
       }
       case Failure(failure) => { return new Label(failure.getMessage) }
       case _                => { return new Label("Very Strange") }
@@ -131,7 +131,7 @@ class ProcessStateView(topProcess: Process) extends BoxPanel(Orientation.Vertica
   val vertexes: ListBuffer[mxCell] = ListBuffer.empty;
 
   try {
-    viewStep(topProcess.top, uberParent, isBefore = true) // before is irrelevant
+    viewAction(topProcess.top, uberParent, isBefore = true) // before is irrelevant
     layout.execute(graph.getDefaultParent());
   } finally {
     graph.getModel().endUpdate();
@@ -142,43 +142,43 @@ class ProcessStateView(topProcess: Process) extends BoxPanel(Orientation.Vertica
   graphView.contents += Component.wrap(theMxGraphComponent);
 
   contents += graphView
-  contents += stepView
+  contents += actionView
 
   /////////////////////////////////////////////
 
-  def viewStep(step: Action, vParent: Any, isBefore: Boolean): Object = { // mxCell
-    step match {
+  def viewAction(action: Action, vParent: Any, isBefore: Boolean): Object = { // mxCell
+    action match {
       case ActionSequential(before, after, index) => {
         // println("ProcessSwingView.viewStep: StepSequential; isBefore=" + isBefore)
-        val vBefore = viewStep(before, vParent, isBefore = true);
-        val vAfter = viewStep(after, vParent, isBefore = false);
+        val vBefore = viewAction(before, vParent, isBefore = true);
+        val vAfter = viewAction(after, vParent, isBefore = false);
         graph.insertEdge(vParent, null, "~>", vBefore, vAfter);
         if (isBefore) return vAfter else return vBefore
       }
       case BasicAction(f, index) => {
         // println("ProcessSwingView.viewStep: StepFunction; isBefore=" + isBefore)
-        val vFunc = graph.insertVertex(vParent, f.getClass.getSimpleName, step, 0, 0, 80, 30, "fillColor=green");
+        val vFunc = graph.insertVertex(vParent, f.getClass.getSimpleName, action, 0, 0, 80, 30, "fillColor=green");
         vertexes += vFunc.asInstanceOf[mxCell]
         return vFunc
       }
       case Process(top, index) => {
         // println("ProcessSwingView.viewStep: Process; isBefore=" + isBefore)
-        val vProcess = graph.insertVertex(vParent, "Process@" + step.index, step, 0, 0, 80, 30, "fillColor=green");
+        val vProcess = graph.insertVertex(vParent, "Process@" + action.index, action, 0, 0, 80, 30, "fillColor=green");
         vertexes += vProcess.asInstanceOf[mxCell]
-        viewStep(top, vProcess, isBefore)
+        viewAction(top, vProcess, isBefore)
         return vProcess
       }
-      case ActionSplit(splitListKey, splitItemKey, splitItemResultKey, splitResultsKey, stepToSplit, index) => {
+      case ActionSplit(splitListKey, splitItemKey, splitItemResultKey, splitResultsKey, actionToSplit, index) => {
         // println("ProcessSwingView.viewStep: StepSplit; splitListKey=" + splitListKey + ",isBefore=" + isBefore)
-        val vStepSplit = graph.insertVertex(vParent, "Split@" + step.index, step, 0, 0, 80, 30, "fillColor=green");
+        val vStepSplit = graph.insertVertex(vParent, "Split@" + action.index, action, 0, 0, 80, 30, "fillColor=green");
         vertexes += vStepSplit.asInstanceOf[mxCell]
-        val vStepToSplit = viewStep(stepToSplit, vStepSplit, isBefore)
-        step.asInstanceOf[ActionSplit].futureSteps andThen {
-          case Success(stepsForSplit) => {
+        val vStepToSplit = viewAction(actionToSplit, vStepSplit, isBefore)
+        action.asInstanceOf[ActionSplit].futureSteps andThen {
+          case Success(actionsForSplit) => {
             graph.getModel().beginUpdate();
             graph.cellsRemoved(Array(vStepToSplit))
-            for (stepSplit <- stepsForSplit) {
-              viewStep(stepSplit, vStepSplit, isBefore)
+            for (actionSplit <- actionsForSplit) {
+              viewAction(actionSplit, vStepSplit, isBefore)
             }
             layout.execute(graph.getDefaultParent());
             graph.getModel().endUpdate();
@@ -189,33 +189,33 @@ class ProcessStateView(topProcess: Process) extends BoxPanel(Orientation.Vertica
       }
       case ActionSelect(filter, index) => {
         // println("ProcessSwingView.viewStep: StepSelect; filter=" + filter + ",isBefore=" + isBefore)
-        val vStepSelect = graph.insertVertex(vParent, "Select@" + step.index, step, 0, 0, 80, 30, "fillColor=green");
+        val vStepSelect = graph.insertVertex(vParent, "Select@" + action.index, action, 0, 0, 80, 30, "fillColor=green");
         vertexes += vStepSelect.asInstanceOf[mxCell]
         return vStepSelect
       }
       case x => {
-        // println("ProcessSwingView.viewStep: DEFAULT;  step=" + step + ",isBefore=" + isBefore)
-        val vertex = graph.insertVertex(vParent, step.getClass.getName, step, 0, 0, 80, 30, "fillColor=green"); // 20, 20, 80,30 // x,y,w,h
+        // println("ProcessSwingView.viewStep: DEFAULT;  action=" + action + ",isBefore=" + isBefore)
+        val vertex = graph.insertVertex(vParent, action.getClass.getName, action, 0, 0, 80, 30, "fillColor=green"); // 20, 20, 80,30 // x,y,w,h
         vertexes += vertex.asInstanceOf[mxCell]
         return vertex;
       }
     }
   }
 
-  def notifyStepChanged(stepEvent: ActionEvent): Unit = {
-    stepEvent match {
-      case ActionStarted(step, instant) => {
-        setStepViewStyle(step, "fillColor=yellow")
+  def notifyActionChanged(actionEvent: ActionEvent): Unit = {
+    actionEvent match {
+      case ActionStarted(action, instant) => {
+        setActionViewStyle(action, "fillColor=yellow")
       }
-      case ActionFinished(step, instant) => {
-        setStepViewStyle(step, "fillColor=blue")
+      case ActionFinished(action, instant) => {
+        setActionViewStyle(action, "fillColor=blue")
       }
     }
   }
 
-  def setStepViewStyle(step: Action, style: String) {
-    vertexes.filter(_.getValue.equals(step)).foreach(vertex => {
-      // println("step=" + step + ",vertex=" + vertex)
+  def setActionViewStyle(action: Action, style: String) {
+    vertexes.filter(_.getValue.equals(action)).foreach(vertex => {
+      // println("action=" + action + ",vertex=" + vertex)
       graph.setCellStyle(style, Array(vertex))
     })
   }
