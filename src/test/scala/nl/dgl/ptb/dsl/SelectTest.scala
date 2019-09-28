@@ -1,6 +1,5 @@
 package nl.dgl.ptb.dsl
 
-import org.scalactic.source.Position.apply
 import org.scalatest.AsyncFlatSpec
 
 class ActionSelectSpec extends AsyncFlatSpec {
