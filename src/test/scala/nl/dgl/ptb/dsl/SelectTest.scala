@@ -3,12 +3,12 @@ package nl.dgl.ptb.dsl
 import org.scalactic.source.Position.apply
 import org.scalatest.AsyncFlatSpec
 
-class SelectSpec extends AsyncFlatSpec {
+class ActionSelectSpec extends AsyncFlatSpec {
 
-  behavior of "Select"
+  behavior of "ActionSelect"
 
-  it should "select candidates who's name start with a prefix during start invocation" in {
-
+  it should "select candidates during start invocation" in {
+    // in this test select candidates who's name start with 'da'.
     val selectCandidatesWherePrefix = Select(Candidates Where Candidates.Prefix)
 
     val candidates = Candidates.candidates(null)
@@ -19,7 +19,7 @@ class SelectSpec extends AsyncFlatSpec {
     assert(candidatesWithPrefix.size < candidates.size)
   }
 
-  it should "eventually complete with an exchange containing the selection" in {
+  it should "eventually complete the future exchange with the selected candidate" in {
 
     val candidates = Candidates.candidates(null);
     val candidate1 = candidates(1)
@@ -30,7 +30,7 @@ class SelectSpec extends AsyncFlatSpec {
     val result = selectCandidatesWherePrefix.start(xnge) map {
       xnge => assert(xnge.get[Candidate](DSL.Selection).get.eq(candidate1))
     }
-    selectCandidatesWherePrefix.selectionPromise.success(candidate1)
+    selectCandidatesWherePrefix.selectionPromise.success(candidate1) // select the candidate
     result
   }
 
