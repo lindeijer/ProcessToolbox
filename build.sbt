@@ -16,6 +16,11 @@ lazy val bsv = (project in file("."))
     // in lib: libraryDependencies += "nl.dgl.romix.akka" % "akka-kryo-serialization-shaded_2.12" % "0.5.3-SNAPSHOT"
     
     libraryDependencies += "org.scalactic" %% "scalactic" % "3.0.8",
-    libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.8" % "test"
+    libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.8" % "test",
+    
+    libraryDependencies += "org.pegdown" % "pegdown" % "1.4.2" % "test" // for html test reports
+
   )
   
+
+testOptions in Test += Tests.Argument(TestFrameworks.ScalaTest, "-h", "target/test-reports-html")
