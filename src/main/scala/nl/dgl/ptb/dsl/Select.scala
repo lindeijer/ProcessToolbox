@@ -5,52 +5,80 @@ import ExecutionContext.Implicits.global
 import scala.util.{ Try, Success, Failure }
 import scala.concurrent.duration._
 import scala.collection.mutable.ListBuffer
+import java.time.Instant
+import scala.collection.mutable.HashMap
 
 trait Selector[T] {
-  val listeners: ListBuffer[Any => Unit] = ListBuffer.empty
+  def select(candidates: List[T], selectionPromise: Promise[T]) // should drop promise if it it completed.
+  def getSelectType(): Class[T]
+  def getSelectLocation(): Location
+  Selector.put(getSelectLocation(), getSelectType(), this)
+}
+
+object Selector {
+
+  def apply[T](selectLocation: Location, selectType: Class[T]): Option[Selector[T]] = {
+    for (
+      class2selectors <- location2selectors.get(selectLocation);
+      selector <- class2selectors.get(selectType)
+    ) yield selector.asInstanceOf[Selector[T]]
+  }
+
+  private val location2selectors = HashMap.empty[Location, HashMap[Class[_], Selector[_]]]
+
+  def put[T](selectLocation: Location, selectType: Class[T], selector: Selector[T]) = {
+    location2selectors.getOrElseUpdate(selectLocation, HashMap.empty[Class[_], Selector[_]]).put(selectType, selector)
+  }
+
 }
 
 object DSL {
 
-  val Selector = "Selector"
+  val Location = "Location"
   val Selection = "Selection"
 }
 
-case class StepSelect[T] private (filter: SelectFilter[T], i: Int)(implicit selector: Selector[T]) extends Step(i) {
+case class ActionSelect[T] private (filter: SelectFilter[T], i: Int) extends Action(i) {
 
-  def this(filter: SelectFilter[T])(implicit selector: Selector[T]) = this(filter, StepConstructionHelper.counter.incrementAndGet())
+  def this(filter: SelectFilter[T]) = this(filter, StepConstructionHelper.counter.incrementAndGet())
 
-  def split: Step = {
+  def split: Action = {
     println("StepSelect.split: NOT CLONED filter=" + filter)
-    StepSelect(filter, StepConstructionHelper.counter.incrementAndGet())
+    ActionSelect(filter, StepConstructionHelper.counter.incrementAndGet())
   }
 
   // selectionFuture because the selection will occur in the future
-  val selectionPromise = Promise[Any]()
+  val selectionPromise = Promise[T]()
   val selectionFuture = selectionPromise.future
 
   // candidatesPromise because we will know about the candidates when the xnge arrives.
-  val candidatesPromise = Promise[List[Any]]()
+  val candidatesPromise = Promise[List[T]]()
   val candidatesFuture = candidatesPromise.future
 
-  def step(xnge: Exchange): Unit = {
+  override def f(xnge: Exchange): Future[Exchange] = {
+
     val candidates = filter.candidates(xnge)
     candidatesPromise.success(candidates)
-    def notifySelection(selection: Any) = {
-      if (candidates.contains(selection)) {
-        selectionPromise.success(selection)
+
+    val selectType = filter.getSelectType()
+
+    for (
+      selectLocation <- xnge.get[Location](DSL.Location);
+      selector <- Selector(selectLocation, selectType)
+    ) selector.select(candidates, selectionPromise) // ask the selector to select one of the candidates
+
+    val xngePromise = Promise[Exchange]()
+
+    selectionFuture.andThen({ // may be completed by the selector or by user via the UI.
+      case Success(selection) => {
+        xnge.put(DSL.Selection, selection)
+        xngePromise.success(xnge)
       }
-    }
-    selector.listeners += notifySelection
+      case Failure(cause) =>
+        xngePromise.failure(cause)
+    })
 
-    // start listening to the selector. The UI may select as well.
-
-    Try(Await.ready(selectionFuture, Duration.Inf)) match { // anti-pattern, in future change to onSuccess
-      case Success(selectedCandidate) => { xnge.put(DSL.Selection, selectedCandidate.value.get.get) }
-      case Failure(_)                 => { println("Failure Happened") }
-      case _                          => { println("Very Strange") }
-    }
-    selector.listeners -= notifySelection
+    return xngePromise.future;
   }
 
 }
@@ -58,18 +86,19 @@ case class StepSelect[T] private (filter: SelectFilter[T], i: Int)(implicit sele
 /**
  * Sets Select(ion) on Exchange
  */
-object Select { // IU presents the list to select from, selector does it some other way
-  def apply[T](filter: SelectFilter[T])(implicit selector: Selector[T]) = {
-    new StepSelect(filter)
+object Select { // The UI presents the list to the user to select from, the selector does it some other way
+  def apply[T](filter: SelectFilter[T]) = {
+    new ActionSelect(filter)
   }
 }
 
-trait SelectSource[T] { // Pallets object
+trait SelectSource[T] {
   def Where(xngeKey: String): SelectFilter[T]
   def candidates(xnge: Exchange): List[T]
 }
 
-trait SelectFilter[T] { // Palets instantce
+trait SelectFilter[T] {
   def And(xngeKey: String): SelectFilter[T]
   def candidates(xnge: Exchange): List[T]
+  def getSelectType(): Class[T]
 }

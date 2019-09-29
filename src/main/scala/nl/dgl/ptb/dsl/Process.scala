@@ -1,35 +1,41 @@
 package nl.dgl.ptb.dsl
 
-import scala.collection.mutable.ListBuffer
 import java.time.Instant
+
 import scala.collection.mutable.HashMap
+import scala.collection.mutable.ListBuffer
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 import scala.concurrent.Promise
-import java.util.concurrent.atomic.AtomicInteger
+import scala.util.Failure
+import scala.util.Success
+
 import gremlin.scala.label
 
-case class Process private (val top: Step, i: Int) extends Step(i) {
+case class Process private (val top: Action, i: Int) extends Action(i) {
 
-  def this(top: Step) = this(top, StepConstructionHelper.counter.getAndIncrement())
+  def this(top: Action) = this(top, StepConstructionHelper.counter.getAndIncrement())
 
-  override def split(): Step = {
+  override def split(): Action = {
     println("Process.split: top=" + top)
     Process(top.split())
   }
 
-  override def step(xnge: Exchange) = {}
-
-  override def process(xnge: Exchange): Exchange = {
+  override def start(xnge: Exchange): Future[Exchange] = {
     val xnge4this = xnge.step(this.index)
-
     xnge.listeners ++= xngeListeners
-    listeners.foreach(_.apply(new StepStarted(this, Instant.now)))
+    val promiseXngeTop = Promise[Exchange]();
+    listeners.foreach(_.apply(new ActionStarted(this, Instant.now)))
     top.listeners += notifySubStepChanged
-    val xngeFromTopStep = top.process(xnge4this)
-    top.listeners -= notifySubStepChanged
-    listeners.foreach(_.apply(new StepFinished(this, Instant.now)))
-    xnge.listeners --= xngeListeners
-
-    return xngeFromTopStep
+    top.start(xnge4this).andThen({
+      case Success(xngeFromTopStep) => {
+        top.listeners -= notifySubStepChanged
+        listeners.foreach(_.apply(new ActionFinished(this, Instant.now)))
+        xnge.listeners --= xngeListeners
+        promiseXngeTop.success(xngeFromTopStep)
+      }
+    })
+    promiseXngeTop.future
   }
 
   val xngeListeners: ListBuffer[ExchangeEvent => Unit] = ListBuffer.empty
@@ -42,7 +48,7 @@ case class Process private (val top: Step, i: Int) extends Step(i) {
 
 object Process {
 
-  def apply(top: Step) = {
+  def apply(top: Action) = {
     new Process(top)
   }
 
@@ -50,188 +56,129 @@ object Process {
 
 // ------
 
-case class StepConcurrent private (a: Step, b: Step, i: Int) extends Step(i) {
+case class ActionConcurrent private (a: Action, b: Action, i: Int) extends Action(i) {
 
-  def this(a: Step, b: Step) = this(a, b, StepConstructionHelper.counter.getAndIncrement)
+  def this(a: Action, b: Action) = this(a, b, StepConstructionHelper.counter.getAndIncrement)
 
-  def split(): Step = ???
+  def split(): Action = ???
 
-  override def step(xnge: Exchange) = {}
-
-  override def process(xnge: Exchange): Exchange = ???
+  override def start(xnge: Exchange): Future[Exchange] = {
+    Future[Exchange](xnge)
+  }
 
 }
 
-case class StepSequential private (val a: Step, val b: Step, i: Int) extends Step(i) {
+case class ActionSequential private (val a: Action, val b: Action, i: Int) extends Action(i) {
 
-  def this(a: Step, b: Step) = this(a, b, StepConstructionHelper.counter.getAndIncrement)
+  def this(a: Action, b: Action) = this(a, b, StepConstructionHelper.counter.getAndIncrement)
 
-  def split(): Step = {
+  def split(): Action = {
     println("StepSequential.split: a=" + a + ",b=" + b)
-    StepSequential(a.split, b.split, StepConstructionHelper.counter.getAndIncrement())
+    ActionSequential(a.split, b.split, StepConstructionHelper.counter.getAndIncrement())
   }
 
-  override def step(xnge: Exchange) = {}
-
-  override def process(xnge: Exchange): Exchange = {
+  override def start(xnge: Exchange): Future[Exchange] = {
     a.listeners += notifySubStepChanged
-    val xngeFromA = a.process(xnge)
-    a.listeners -= notifySubStepChanged
-    b.listeners += notifySubStepChanged
-    val xngeFromB = b.process(xngeFromA);
-    b.listeners -= notifySubStepChanged
-    return xngeFromB
+    val promiseXngeB = Promise[Exchange]();
+    a.start(xnge).andThen({
+      case Success(xngeFromA) => {
+        a.listeners -= notifySubStepChanged
+        b.listeners += notifySubStepChanged
+        b.start(xngeFromA).andThen({
+          case Success(xngeFromB) => {
+            b.listeners -= notifySubStepChanged
+            promiseXngeB.success(xngeFromB)
+          }
+        });
+      }
+    })
+    promiseXngeB.future
   }
 
 }
 
-class StepChoice private (steps: Vector[Step], chooser: String, i: Int) extends Step(i) {
+class ActionChoice private (steps: Vector[Action], chooser: String, i: Int) extends Action(i) {
 
-  def this(steps: Vector[Step], chooser: String) = this(steps, chooser, StepConstructionHelper.counter.getAndIncrement)
+  def this(steps: Vector[Action], chooser: String) = this(steps, chooser, StepConstructionHelper.counter.getAndIncrement)
 
-  def split(): Step = ???
+  def split(): Action = ???
 
-  override def step(xnge: Exchange) = ???
+  override def start(xnge: Exchange) = ???
 
 }
 
-case class StepSplit private (splitListKey: String, splitItemKey: String, splitItemResultKey: String, splitResultsKey: String, stepToSplit: Step, i: Int) extends Step(i) {
+//wow, check out https://github.com/S-Mach/s_mach.concurrent
 
-  def this(splitListKey: String, splitItemKey: String, splitItemResultKey: String, splitResultsKey: String, stepToSplit: Step) = this(splitListKey, splitItemKey, splitItemResultKey, splitResultsKey, stepToSplit, StepConstructionHelper.counter.getAndIncrement)
+case class ActionSplit private (splitListKey: String, splitItemKey: String, splitItemResultKey: String, splitResultsKey: String, stepToSplit: Action, i: Int) extends Action(i) {
 
-  def split(): Step = ???
+  def this(splitListKey: String, splitItemKey: String, splitItemResultKey: String, splitResultsKey: String, stepToSplit: Action) = this(splitListKey, splitItemKey, splitItemResultKey, splitResultsKey, stepToSplit, StepConstructionHelper.counter.getAndIncrement)
 
-  override def step(xnge: Exchange) = {}
+  def split(): Action = ???
 
-  val items2StepPromise = Promise[Map[Any, Step]]()
-  val items2StepFuture = items2StepPromise.future
+  val promiseSteps = Promise[List[Action]]()
+  val futureSteps = promiseSteps.future // the view looks at this.
 
-  override def process(xnge: Exchange): Exchange = {
+  override def start(xnge: Exchange): Future[Exchange] = {
     val xnge4this = xnge.step(this.index);
-
     if (xnge4this.getIsStepFinished()) {
       println("StepSplit: isFinished! index=" + index)
-      return xnge4this
+      Future[Exchange](xnge)
     }
-
-    listeners.foreach(_.apply(new StepStarted(this, Instant.now)))
-    val splitList = xnge.get[List[Any]](splitListKey)
-    val items2Step = splitList.map {
-      (_, stepToSplit.split())
-    } toMap;
-    items2StepPromise.success(items2Step)
-    val splitResults = new HashMap[Any, Any]
-    for (splitItem <- splitList) {
-      val stepForItem = items2Step.get(splitItem).get
-      val xnge4splitStep = xnge4this.step(stepForItem.index)
-      xnge4splitStep.put(splitItemKey, splitItem)
+    listeners.foreach(_.apply(new ActionStarted(this, Instant.now)))
+    val items = xnge.get[List[Any]](splitListKey).get
+    val items2steps = items.map(item => {
+      val stepForItem = stepToSplit.split()
+      (item, stepForItem)
+    })
+    val steps = items2steps.map(item2step => {
+      item2step._2
+    })
+    promiseSteps.success(steps)
+    val futuresForItems = items2steps.map(item2step => {
+      val item = item2step._1
+      val stepForItem = item2step._2
+      val xngeForItem = xnge4this.split(stepForItem.index)
+      xngeForItem.put(splitItemKey, item)
       stepForItem.listeners += notifySubStepChanged
-      val xnge4splitStepResult = stepForItem.process(xnge4splitStep);
-      stepForItem.listeners -= notifySubStepChanged
-      val splitItemResult = xnge4splitStepResult.get[Any](splitItemResultKey)
-      splitResults.put(splitItem, splitItemResult)
-    }
-    xnge4this.put(splitResultsKey, splitResults.toMap)
-    listeners.foreach(_.apply(new StepFinished(this, Instant.now)))
-
-    xnge4this.setStepIsFinished()
-
-    return xnge4this
+      stepForItem.start(xngeForItem).andThen({
+        case _ => {
+          stepForItem.listeners -= notifySubStepChanged
+        }
+      })
+    })
+    val splitResults = new HashMap[Any, Any]
+    Future.sequence(futuresForItems).andThen({ // with the list of exchanges from the split steps.
+      case Success(xnges) => {
+        xnges.foreach(xnge => {
+          val item = xnge.get[Any](splitItemKey).get
+          val resultForItem = xnge.get[Any](splitItemResultKey).get
+          splitResults.put(item, resultForItem)
+        })
+        xnge4this.put(splitResultsKey, splitResults.toMap)
+      }
+      case Failure(reason) => {
+        xnge4this.put(splitResultsKey, reason)
+      }
+    }).andThen({ // finally
+      case _ => {
+        listeners.foreach(_.apply(new ActionFinished(this, Instant.now)))
+        xnge4this.setStepIsFinished()
+      }
+    }).map(_ => { // return the split's exchange rather that the list of split exchanges.
+      xnge4this
+    })
   }
 
 }
 
 object Split {
 
-  def apply(splitListKey: String, splitItemKey: String, splitItemResultKey: String, splitResultsKey: String, step: Step): StepSplit = {
-    return new StepSplit(splitListKey, splitItemKey, splitItemResultKey, splitResultsKey, step)
+  def apply(splitListKey: String, splitItemKey: String, splitItemResultKey: String, splitResultsKey: String, step: Action): ActionSplit = {
+    return new ActionSplit(splitListKey, splitItemKey, splitItemResultKey, splitResultsKey, step)
   }
 
-  def apply(splitItemKey: String, step: Step): StepSplit = {
-    return new StepSplit(splitItemKey + "List", splitItemKey, splitItemKey + "Result", splitItemKey + "ResultList", step)
-  }
-
-}
-
-// ----
-
-trait StepEvent {
-  val step: Step
-  val instant: Instant
-}
-case class StepStarted(step: Step, instant: Instant) extends StepEvent {}
-case class StepFinished(step: Step, instant: Instant) extends StepEvent {}
-
-object StepConstructionHelper {
-  val counter = new AtomicInteger(0)
-}
-
-@label("step")
-abstract class Step(val index: Int) {
-
-  def split(): Step
-
-  def ~>(next: Step): Step = {
-    new StepSequential(this, next);
-  }
-
-  def &&(next: Step): StepConcurrent = {
-    new StepConcurrent(this, next)
-  }
-
-  /**
-   * Execute the step's function. User extensions of this class must override this method.
-   */
-  def step(xnge: Exchange)
-
-  /**
-   * Execute the step. User extensions of this class should not override this method.
-   */
-  def process(xnge: Exchange): Exchange = {
-    val xnge4this = xnge.step(this.index)
-
-    if (xnge4this.getIsStepFinished()) {
-      println("Step: isFinished! index=" + index)
-      listeners.foreach(_.apply(new StepFinished(this, Instant.now)))
-      return xnge4this
-    }
-
-    listeners.foreach(_.apply(new StepStarted(this, Instant.now)))
-    step(xnge4this) // the xnge is modified as a side effect.
-    listeners.foreach(_.apply(new StepFinished(this, Instant.now)))
-
-    xnge4this.setStepIsFinished();
-
-    return xnge4this;
-  }
-
-  val listeners: ListBuffer[StepEvent => Unit] = ListBuffer.empty
-
-  def notifySubStepChanged(subStepEvent: StepEvent) = {
-    listeners.foreach(_.apply(subStepEvent))
+  def apply(splitItemKey: String, step: Action): ActionSplit = {
+    return new ActionSplit(splitItemKey + "List", splitItemKey, splitItemKey + "Result", splitItemKey + "ResultList", step)
   }
 
 }
-
-case class StepFunction private (val f: Exchange => Any, i: Int) extends Step(i) {
-
-  def this(f: Exchange => Any) = this(f, StepConstructionHelper.counter.getAndIncrement())
-
-  def split(): Step = {
-    StepFunction(f, StepConstructionHelper.counter.getAndIncrement()) // NO CLONE HERE OF F, SO THE F MAY NOT HAVE SIDE-EFFECTS
-  }
-
-  override def step(xnge: Exchange) = {
-    f.apply(xnge)
-  }
-
-}
-
-object Step extends StepFunction(null) {
-
-  def apply(f: Exchange => Any): Step = {
-    return new StepFunction(f);
-  }
-
-}
-

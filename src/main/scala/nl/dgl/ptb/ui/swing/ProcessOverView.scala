@@ -19,7 +19,7 @@ class ProcessOverView(process: Process) extends BoxPanel(Orientation.Vertical) {
     repaint()
   }
 
-  process.listeners += processView.notifyStepChanged
+  process.listeners += processView.notifyActionChanged
   process.xngeListeners += notifyExchangeChanged
 
   val exchangeEvents: ListBuffer[String] = ListBuffer.empty

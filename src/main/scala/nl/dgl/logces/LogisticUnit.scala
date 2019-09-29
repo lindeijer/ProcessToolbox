@@ -75,7 +75,7 @@ object Pallet {
     if (dst.article.equals(Article.unknown) && dst.itemCount == 0) {
       dst.article = src.article
     } else {
-      throw new IllegalArgumentException("Destination Pallet has wrong article, found " + dst.article + " but expected " + src.article);
+      throw new IllegalArgumentException("Destination Pallet should be empty, but dst.article=" + dst.article + " and dst.itemCount=" + dst.itemCount);
     }
     src.itemCount = src.itemCount - transferCount
     dst.itemCount = dst.itemCount + transferCount
@@ -110,13 +110,15 @@ class PalletSelectFiler(source: SelectSource[Pallet], xngeKey: String) extends S
 
   def candidates(xnge: Exchange): List[Pallet] = {
     val candidates = source.candidates(xnge)
-    val xngeValue = xnge.get[Any](xngeKey)
+    val xngeValue = xnge.get[Any](xngeKey).get
     xngeValue match {
       case article: Article => return candidates.filter(_.article.equals(article))
       case product: Product => return candidates.filter(_.article.product.equals(product))
       case _                => return candidates
     }
   }
+
+  def getSelectType(): Class[Pallet] = classOf[Pallet]
 }
 
 object Pallets extends SelectSource[Pallet] {
@@ -215,6 +217,10 @@ class VesselSelectFiler(source: SelectSource[Vessel], xngeKey: String) extends S
       case article: Product => return candidates.filter(_.product.equals(article))
       case _                => return candidates
     }
+  }
+
+  def getSelectType(): Class[Vessel] = {
+    classOf[Vessel]
   }
 }
 

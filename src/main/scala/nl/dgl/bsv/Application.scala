@@ -5,7 +5,6 @@ import nl.dgl.logces.Article
 import nl.dgl.logces.Pallet
 import nl.dgl.ptb.dsl.Exchange
 import nl.dgl.logces.PalletSelector
-import nl.dgl.logces.PalletScanner
 import nl.dgl.logces.TransferItemsBetweenPallets
 import nl.dgl.logces.TransferProductBetweenVessels
 import nl.dgl.logces.Vessel
@@ -25,6 +24,12 @@ import nl.dgl.ptb.dsl.StepConstructionHelper
 import nl.dgl.ptb.dsl.ExchangeHashMap
 import org.apache.tinkerpop.shaded.minlog.Log
 import nl.dgl.logces.LoGcEs
+import scala.util.Success
+import scala.concurrent.ExecutionContext
+import ExecutionContext.Implicits.global
+import nl.dgl.logces.PalletScannerLoser
+import nl.dgl.ptb.dsl.DSL
+import nl.dgl.logces.LogisticLocation
 
 object MES_4C_LIENT extends Frame with App {
 
@@ -65,9 +70,11 @@ object MES_4C_LIENT extends Frame with App {
 
   // runtime
 
-  implicit val aPalletScanner = PalletScannerManiac(0)
-  implicit val aVesselScanner = VesselScannerLoser(0);
-  // implicit val scale0 = Scale(0)
+  val vitamineHal = LogisticLocation("VitamineHal")
+
+  val aPalletScanner = PalletScannerLoser(vitamineHal) //PalletScannerManiac(vitamineHal)
+
+  val aVesselScanner = VesselScannerLoser(vitamineHal);
 
   val bsv = new BijStortVoorbereiding();
   val bsvView = new ProcessOverView(bsv);
@@ -78,7 +85,11 @@ object MES_4C_LIENT extends Frame with App {
 
   // xnge
 
-  val xnge = new ExchangeGremlin();
+  val xnge =
+    new ExchangeHashMap()
+    // new ExchangeGremlin();
+
+  xnge.put(DSL.Location, vitamineHal)
 
   println("!!!!!!!!!!!!!!!!!! xnge.index=" + xnge.getStepIndex())
 
@@ -87,17 +98,15 @@ object MES_4C_LIENT extends Frame with App {
 
   // xnge.put(Scale, Scale(0))
   xnge.put(AmountMarginPercent, 10.0)
-  val xngeResult = bsv.process(xnge)
-
-  // result
-
-  println("TransferItemCountBetweenPallets=" + xngeResult.get(TransferItemsBetweenPallets.Count))
-  println("BijstortScoopAmount=" + xngeResult.get(TransferProductBetweenVessels.AmountActual))
-
-  println("SrcVessel=" + xngeResult.get[Vessel](LoGcEs.SrcVessel))
-  println("DstVessel=" + xngeResult.get[Vessel](LoGcEs.DstVessel))
-
-  println("bijstortResultaten=" + xngeResult.get[Map[Any, Any]](BSV.BijstortResultaaten))
+  bsv.start(xnge).andThen({
+    case Success(xngeResult) => {
+      println("TransferItemCountBetweenPallets=" + xngeResult.get(TransferItemsBetweenPallets.Count))
+      println("BijstortScoopAmount=" + xngeResult.get(TransferProductBetweenVessels.AmountActual))
+      println("SrcVessel=" + xngeResult.get[Vessel](LoGcEs.SrcVessel))
+      println("DstVessel=" + xngeResult.get[Vessel](LoGcEs.DstVessel))
+      println("bijstortResultaten=" + xngeResult.get[Map[Any, Any]](BSV.BijstortResultaaten))
+    }
+  })
 
 }
 
@@ -105,8 +114,10 @@ object MES_4CLIENT_RESTART extends Frame with App {
 
   title = "BijStortVoorbereiding - RESTART"
 
-  implicit val aPalletScanner = PalletScannerManiac(0)
-  implicit val aVesselScanner = VesselScannerLoser(0);
+  val vitamineHal = LogisticLocation("VitamineHal")
+
+  val aPalletScanner = PalletScannerManiac(vitamineHal)
+  val aVesselScanner = VesselScannerLoser(vitamineHal);
 
   val bsv = new BijStortVoorbereiding();
   val bsvView = new ProcessOverView(bsv);
@@ -115,18 +126,23 @@ object MES_4CLIENT_RESTART extends Frame with App {
 
   open()
 
-  val xnge = new ExchangeGremlin(19);
+  // val xnge = new ExchangeGremlin(19);
+  val xnge = new ExchangeHashMap()
 
-  val xngeResult = bsv.process(xnge)
+  bsv.start(xnge).andThen({
+    case Success(xngeResult) => {
+      println("TransferItemCountBetweenPallets=" + xngeResult.get(TransferItemsBetweenPallets.Count))
+      println("BijstortScoopAmount=" + xngeResult.get(TransferProductBetweenVessels.AmountActual))
+
+      println("SrcVessel=" + xngeResult.get[Vessel](LoGcEs.SrcVessel))
+      println("DstVessel=" + xngeResult.get[Vessel](LoGcEs.DstVessel))
+
+      println("bijstortResultaten=" + xngeResult.get[Map[Any, Any]](BSV.BijstortResultaaten))
+
+    }
+
+  })
 
   // result
-
-  println("TransferItemCountBetweenPallets=" + xngeResult.get(TransferItemsBetweenPallets.Count))
-  println("BijstortScoopAmount=" + xngeResult.get(TransferProductBetweenVessels.AmountActual))
-
-  println("SrcVessel=" + xngeResult.get[Vessel](LoGcEs.SrcVessel))
-  println("DstVessel=" + xngeResult.get[Vessel](LoGcEs.DstVessel))
-
-  println("bijstortResultaten=" + xngeResult.get[Map[Any, Any]](BSV.BijstortResultaaten))
 
 }

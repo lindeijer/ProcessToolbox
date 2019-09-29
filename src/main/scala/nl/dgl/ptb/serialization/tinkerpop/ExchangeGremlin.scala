@@ -35,6 +35,7 @@ import nl.dgl.ptb.serialization.tinkerpop.GryoScalaCollectionSerializer
 import nl.dgl.ptb.dsl.Exchange
 import nl.dgl.ptb.dsl.ExchangeHashMap
 import nl.dgl.ptb.dsl.StepConstructionHelper
+import nl.dgl.logces.LogisticLocation
 
 @label("keyandvalue")
 case class KeyAndValue(key: Option[Any], value: Option[Any])
@@ -107,6 +108,74 @@ class IngredientSerializer extends Serializer[Ingedient] {
 
 }
 
+class VesselPureSerializer extends Serializer[VesselPure] {
+
+  def write(kryo: org.apache.tinkerpop.shaded.kryo.Kryo, output: Output, //
+            vesselPure: nl.dgl.logces.VesselPure): Unit = //
+    {
+      output.writeString(vesselPure.id)
+      kryo.writeObject(output, vesselPure.lot)
+    }
+
+  def read(kryo: org.apache.tinkerpop.shaded.kryo.Kryo, input: Input, //
+           clazz: Class[nl.dgl.logces.VesselPure]): nl.dgl.logces.VesselPure = //
+    {
+      return VesselPure(input.readString(), kryo.readObject[Lot](input, classOf[Lot]))
+    }
+
+}
+
+class LotSerializer extends Serializer[Lot] {
+
+  def write(kryo: org.apache.tinkerpop.shaded.kryo.Kryo, output: Output, //
+            lot: nl.dgl.logces.Lot): Unit = //
+    {
+      output.writeString(lot.id)
+      kryo.writeObject(output, lot.product)
+      output.writeDouble(lot.amount)
+    }
+
+  def read(kryo: org.apache.tinkerpop.shaded.kryo.Kryo, input: Input, //
+           clazz: Class[nl.dgl.logces.Lot]): nl.dgl.logces.Lot = //
+    {
+      return Lot(input.readString(), kryo.readObject[Product](input, classOf[Product]), input.readDouble())
+    }
+
+}
+
+class VesselMixedSerializer extends Serializer[VesselMixed] {
+
+  def write(kryo: org.apache.tinkerpop.shaded.kryo.Kryo, output: Output, //
+            vesselMixed: nl.dgl.logces.VesselMixed): Unit = //
+    {
+      output.writeString(vesselMixed.id)
+      kryo.writeObject(output, vesselMixed.product)
+    }
+
+  def read(kryo: org.apache.tinkerpop.shaded.kryo.Kryo, input: Input, //
+           clazz: Class[nl.dgl.logces.VesselMixed]): nl.dgl.logces.VesselMixed = //
+    {
+      return VesselMixed(input.readString(), kryo.readObject[Product](input, classOf[Product]))
+    }
+
+}
+
+class LogisticLocationSerializer extends Serializer[LogisticLocation] {
+
+  def write(kryo: org.apache.tinkerpop.shaded.kryo.Kryo, output: Output, //
+            logisticLocation: nl.dgl.logces.LogisticLocation): Unit = //
+    {
+      output.writeString(logisticLocation.id)
+    }
+
+  def read(kryo: org.apache.tinkerpop.shaded.kryo.Kryo, input: Input, //
+           clazz: Class[nl.dgl.logces.LogisticLocation]): nl.dgl.logces.LogisticLocation = //
+    {
+      return LogisticLocation(input.readString())
+    }
+
+}
+
 /////////////////////////////////////////////////
 
 object ExchangeGremlinGyro {
@@ -121,13 +190,18 @@ object ExchangeGremlinGyro {
       .addCustom(Class.forName("scala.collection.mutable.HashMap")) //
       .addCustom(Class.forName("scala.Tuple2$mcDD$sp")) //
       .addCustom(Class.forName("scala.collection.immutable.Map$Map2")) //
+      .addCustom(Class.forName("scala.collection.immutable.Map$Map1")) //
+      //.addCustom(Class.forName("scala.Tuple2")) //
+      //.addCustom(Class.forName("scala.Some")) //
+
       .addCustom(classOf[Product], new ProductSerializer()) //
       .addCustom(classOf[Ingedient], new IngredientSerializer()) //
       .addCustom(classOf[Pallet], new PalletSerializer()) //
       .addCustom(classOf[Article], new ArticleSerializer()) //
-      .addCustom(classOf[VesselPure]) //
-      .addCustom(classOf[Lot]) //
-      .addCustom(classOf[VesselMixed]) //
+      .addCustom(classOf[VesselPure], new VesselPureSerializer()) //
+      .addCustom(classOf[Lot], new LotSerializer()) //
+      .addCustom(classOf[VesselMixed], new VesselMixedSerializer()) //
+      .addCustom(classOf[LogisticLocation], new LogisticLocationSerializer()) //
       .create
 
   val graph: ScalaGraph = {
@@ -175,6 +249,10 @@ class ExchangeGremlin private (stepIndex: Int, xngePrev: Exchange) extends Excha
     return new ExchangeGremlin(nextStepIndex, this);
   }
 
+  override def split(nextStepIndex: Int): Exchange = {
+    return new ExchangeGremlin(nextStepIndex, this);
+  }
+
   def getStepIndex(): Int = stepIndex
 
   override def getIsStepFinished(): Boolean = {
@@ -198,7 +276,7 @@ class ExchangeGremlin private (stepIndex: Int, xngePrev: Exchange) extends Excha
     vertex
   }
 
-  def containsKey(key: Any): Boolean = ???
+  def containsKey(key: String): Boolean = ???
 
   def getLocal[T](key: String): Option[T] = {
     // println("XNGE getLocal: step.index=" + stepIndex + ",key=" + key + ",vertex4step=" + vertex4step)
@@ -216,10 +294,12 @@ class ExchangeGremlin private (stepIndex: Int, xngePrev: Exchange) extends Excha
     return None
   }
 
-  def get[T](key: String): T = {
-    val value = getLocal[T](key).getOrElse(xngePrev.get[T](key))
-    // println("XNGE get: step.index=" + stepIndex + ",key=" + key + ",value=" + value)
-    return value
+  override def get[T](key: String): Option[T] = {
+    val valueLocalOpt = getLocal[T](key);
+    if (valueLocalOpt.isDefined) { // is there a more idiomatic way?
+      return valueLocalOpt;
+    }
+    return xngePrev.get[T](key);
   }
 
   override def put(key: String, value: Any) = {
@@ -231,8 +311,8 @@ class ExchangeGremlin private (stepIndex: Int, xngePrev: Exchange) extends Excha
     // println("XNGE put check: get value=" + get(key))
   }
 
-  def remove(key: Any): Unit = ???
-  def rename(oldKey: Any, newKey: Any): Unit = ???
+  def remove(key: String): Unit = ???
+  def rename(oldKey: String, newKey: String): Unit = ???
 
 }
 
