@@ -237,6 +237,11 @@ object ExchangeGremlin {
 
   def commit() = ExchangeGremlinGyro.commit();
 
+  def apply(): Exchange = {
+    return ExchangeGremlin()
+
+  }
+
 }
 
 class ExchangeGremlin private (stepIndex: Int, xngePrev: Exchange) extends Exchange {

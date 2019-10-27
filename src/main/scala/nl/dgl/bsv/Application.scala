@@ -85,9 +85,7 @@ object MES_4C_LIENT extends Frame with App {
 
   // xnge
 
-  val xnge =
-    new ExchangeHashMap()
-    // new ExchangeGremlin();
+  val xnge = Exchange()
 
   xnge.put(DSL.Location, vitamineHal)
 

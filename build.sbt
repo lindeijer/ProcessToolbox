@@ -4,6 +4,7 @@ ThisBuild / organization := "nl.dgl"
 lazy val bsv = (project in file("."))
   .settings(
     resolvers += Resolver.mavenLocal,
+    resolvers += "Oracle Released Java Packages" at "http://download.oracle.com/maven",
     updateOptions := updateOptions.value.withLatestSnapshots(false),
     name := "BijStortVoorbereiding",
     // libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.8" % Test,
@@ -18,7 +19,14 @@ lazy val bsv = (project in file("."))
     libraryDependencies += "org.scalactic" %% "scalactic" % "3.0.8",
     libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.8" % "test",
     
-    libraryDependencies += "org.pegdown" % "pegdown" % "1.4.2" % "test" // for html test reports
+    libraryDependencies += "org.pegdown" % "pegdown" % "1.4.2" % "test", // for html test reports
+    
+    //libraryDependencies += "org.janusgraph" % "janusgraph-core" % "0.3.2", // for db
+    //libraryDependencies += "org.janusgraph" % "janusgraph-berkeleyje" % "0.3.2", // for db
+    
+    libraryDependencies += "ch.qos.logback" % "logback-classic" % "1.2.3",
+    libraryDependencies += "com.typesafe.scala-logging" %% "scala-logging" % "3.9.2",
+   
 
   )
   

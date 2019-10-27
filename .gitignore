@@ -6,3 +6,4 @@
 /target/
 /ExchangeGremlin.kryo
 .cache-tests
+/data/

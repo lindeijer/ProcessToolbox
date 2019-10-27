@@ -26,6 +26,17 @@ trait Exchange {
   def setStepIsFinished()
 }
 
+object Exchange {
+
+  def apply(): Exchange = {
+    // new nl.dgl.ptb.serialization.tinkerpop.ExchangeGremlin();
+    return new ExchangeHashMap();
+  }
+
+}
+
+// ---------------------
+
 class ExchangeHashMap extends Exchange {
 
   override def step(nextStepIndex: Int): Exchange = {

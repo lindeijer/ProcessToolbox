@@ -146,18 +146,28 @@ class ProcessStateView(topProcess: Process) extends BoxPanel(Orientation.Vertica
 
   /////////////////////////////////////////////
 
+  def insertEdge(vParent: Any, label: String, o: Any, vBefore: Any, vAfter: Any): Object = {
+    graph.insertEdge(vParent, label, o, vBefore, vAfter); // emit message to browser
+  }
+
+  def insertVertex(vParent: Any, label: String, action: Any, w: Double, h: Double, x: Double, y: Double, style: String): Object = {
+    graph.insertVertex(vParent, label, action, w, h, x, y, style); // emit message to browser
+  }
+
+  ////////////////////////////////////////////
+
   def viewAction(action: Action, vParent: Any, isBefore: Boolean): Object = { // mxCell
     action match {
       case ActionSequential(before, after, index) => {
         // println("ProcessSwingView.viewStep: StepSequential; isBefore=" + isBefore)
         val vBefore = viewAction(before, vParent, isBefore = true);
         val vAfter = viewAction(after, vParent, isBefore = false);
-        graph.insertEdge(vParent, null, "~>", vBefore, vAfter);
+        insertEdge(vParent, null, "~>", vBefore, vAfter);
         if (isBefore) return vAfter else return vBefore
       }
       case BasicAction(f, index) => {
         // println("ProcessSwingView.viewStep: StepFunction; isBefore=" + isBefore)
-        val vFunc = graph.insertVertex(vParent, f.getClass.getSimpleName, action, 0, 0, 80, 30, "fillColor=green");
+        val vFunc = graph.insertVertex(vParent, f.getClass.getSimpleName, action, 0, 0, 80, 30, "fillColor=green"); // emit
         vertexes += vFunc.asInstanceOf[mxCell]
         return vFunc
       }
@@ -202,7 +212,7 @@ class ProcessStateView(topProcess: Process) extends BoxPanel(Orientation.Vertica
     }
   }
 
-  def notifyActionChanged(actionEvent: ActionEvent): Unit = {
+  def notifyActionChanged(actionEvent: ActionEvent): Unit = { // emit to browser
     actionEvent match {
       case ActionStarted(action, instant) => {
         setActionViewStyle(action, "fillColor=yellow")
