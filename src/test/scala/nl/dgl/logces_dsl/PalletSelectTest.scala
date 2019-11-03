@@ -21,7 +21,7 @@ import nl.dgl.logces.Pallet
 
 class PalletSelectSpec extends FlatSpec with Matchers {
 
-  val aPalletSetup = new PalletSetup();
+  PalletSetup.article_P1_10;
 
   "A Pallets Select Filter" should "select a sub-set of all pallets with a particular product" in {
     val palletsAllList = Pallets.candidates(null)

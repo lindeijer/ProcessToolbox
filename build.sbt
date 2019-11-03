@@ -1,6 +1,11 @@
 ThisBuild / scalaVersion := "2.12.6"
 ThisBuild / organization := "nl.dgl"
 
+
+val http4sVersion = "0.20.11"  // prefers scalaVersion := "2.12.10"
+
+scalacOptions ++= Seq("-Ypartial-unification")
+
 lazy val bsv = (project in file("."))
   .settings(
     resolvers += Resolver.mavenLocal,
@@ -26,6 +31,14 @@ lazy val bsv = (project in file("."))
     
     libraryDependencies += "ch.qos.logback" % "logback-classic" % "1.2.3",
     libraryDependencies += "com.typesafe.scala-logging" %% "scala-logging" % "3.9.2",
+    
+    libraryDependencies ++= Seq(
+  		"org.http4s" %% "http4s-dsl" % http4sVersion,
+ 		"org.http4s" %% "http4s-blaze-server" % http4sVersion, // "org.http4s" %% "http4s-server" % http4sVersion, ???? 
+  		"org.http4s" %% "http4s-blaze-client" % http4sVersion
+	),
+	
+	// libraryDependencies += "com.typesafe.play" %% "play-json" % "2.7.3",
    
 
   )

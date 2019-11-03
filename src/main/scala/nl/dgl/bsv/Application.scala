@@ -1,37 +1,96 @@
 package nl.dgl.bsv
 
-import nl.dgl.logces.Product
+import java.io.File
+import java.util.UUID
+import java.util.concurrent._
+
+import scala.concurrent.ExecutionContext
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.swing.Frame
+import scala.util.Success
+
+import org.http4s._
+import org.http4s.MediaType
+import org.http4s.dsl.io._
+import org.http4s.headers.`Content-Type`
+import org.http4s.server.blaze._
+import org.http4s.StaticFile
+import org.http4s.server.staticcontent.FileService
+
+import cats.effect._
+import cats.implicits._
 import nl.dgl.logces.Article
+import nl.dgl.logces.LoGcEs
+import nl.dgl.logces.LogisticLocation
+import nl.dgl.logces.Lot
 import nl.dgl.logces.Pallet
-import nl.dgl.ptb.dsl.Exchange
-import nl.dgl.logces.PalletSelector
+import nl.dgl.logces.PalletScannerLoser
+import nl.dgl.logces.PalletScannerManiac
+import nl.dgl.logces.Product
 import nl.dgl.logces.TransferItemsBetweenPallets
 import nl.dgl.logces.TransferProductBetweenVessels
-import nl.dgl.logces.Vessel
-import nl.dgl.logces.Lot
-import java.util.UUID
-import nl.dgl.ptb.dsl.Selector
-import nl.dgl.logces.PalletScannerManiac
-import nl.dgl.logces.Scale
 import nl.dgl.logces.TransferProductBetweenVessels.AmountMarginPercent
-import nl.dgl.ptb.ui.swing.ProcessOverView
-import nl.dgl.ptb.ui.swing.ProcessOverView
-import scala.swing.Frame
-import nl.dgl.ptb.serialization.tinkerpop.ExchangeGremlin
-import nl.dgl.logces.VesselSelector
+import nl.dgl.logces.Vessel
 import nl.dgl.logces.VesselScannerLoser
-import nl.dgl.ptb.dsl.StepConstructionHelper
-import nl.dgl.ptb.dsl.ExchangeHashMap
-import org.apache.tinkerpop.shaded.minlog.Log
-import nl.dgl.logces.LoGcEs
-import scala.util.Success
-import scala.concurrent.ExecutionContext
-import ExecutionContext.Implicits.global
-import nl.dgl.logces.PalletScannerLoser
 import nl.dgl.ptb.dsl.DSL
-import nl.dgl.logces.LogisticLocation
+import nl.dgl.ptb.dsl.Exchange
+import nl.dgl.ptb.dsl.ExchangeHashMap
+import nl.dgl.ptb.ui.swing.ProcessOverView
 
-object MES_4C_LIENT extends Frame with App {
+import cats.effect._
+// import cats.effect._
+
+import cats.implicits._
+// import cats.implicits._
+
+import org.http4s.server.blaze.BlazeServerBuilder
+// import org.http4s.server.blaze.BlazeServerBuilder
+
+import org.http4s.server.staticcontent._
+// import org.http4s.server.staticcontent._
+
+import org.http4s.syntax.kleisli._
+// import org.http4s.syntax.kleisli._
+
+object MES_4_CLIENT extends Frame with IOApp {
+
+  val blockingEc = ExecutionContext.fromExecutorService(Executors.newFixedThreadPool(4))
+
+  val pathToDist = "../../../workspace-ember/ember-quickstart2/dist"
+  val pathToIndex = pathToDist + "/index.html"
+
+  val ccc = new File(pathToIndex)
+
+  println("ccc.canRead()=" + ccc.canRead())
+  println("ccc.getAbsolutePath()xx=" + ccc.getAbsolutePath())
+
+  val theService = HttpRoutes.of[IO] {
+    //case GET -> Root / "hello" / name         => Ok(s"Hello, $name.")
+    case GET -> Root / "actions" => Ok(getJsonApi(), `Content-Type`(MediaType.application.`vnd.api+json`))
+    //case request @ GET -> Root / "index.html" => StaticFile.fromFile(new File(pathToIndex), blockingEc, Some(request)).getOrElseF(NotFound()) // In case the file doesn't exist
+  }.orNotFound
+
+  import org.http4s.server.middleware._
+
+  val corsService = CORS(theService)
+
+  def run(args: List[String]): IO[ExitCode] =
+    BlazeServerBuilder[IO]
+      .bindHttp(8080, "localhost")
+      //.withHttpApp(helloWorldService)
+      .withHttpApp(corsService)
+      .serve
+      .compile
+      .drain
+      .as(ExitCode.Success)
+
+  //////////////////
+
+  def getJsonApi(): String = {
+    return JsonApi.getProcessJsonApi(bsv.asInstanceOf[nl.dgl.ptb.dsl.Process]);
+  }
+
+  //////////////////////////////
 
   // Log.TRACE();
 
