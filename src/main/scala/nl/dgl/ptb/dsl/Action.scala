@@ -9,6 +9,7 @@ import scala.concurrent.Future
 import scala.util.Success
 
 import gremlin.scala.label
+import scala.concurrent.Promise
 
 trait ActionEvent {
   val step: Action
@@ -19,6 +20,10 @@ case class ActionFinished(step: Action, instant: Instant) extends ActionEvent {}
 
 object StepConstructionHelper {
   val counter = new AtomicInteger(0)
+}
+
+object ActionState extends Enumeration {
+  val CREATED, STARTED, FINISHED = Value
 }
 
 @label("step")
@@ -36,11 +41,26 @@ abstract class Action(val index: Int) {
 
   def f(xnge: Exchange): Future[Exchange] = ???
 
+  val xnge4thisPromise = Promise[Exchange];
+  val xnge4thisFuture = xnge4thisPromise.future
+
+  def getState(): ActionState.Value = {
+    if (xnge4thisFuture.isCompleted) {
+      if (xnge4thisFuture.value.get.get.getIsStepFinished()) {
+        return ActionState.FINISHED
+      } else {
+        return ActionState.STARTED
+      }
+    }
+    return ActionState.CREATED
+  }
+
   /**
    * The action's asynchronous function.
    */
   def start(xnge: Exchange): Future[Exchange] = {
     val xnge4this = xnge.step(this.index)
+    xnge4thisPromise.success(xnge4this)
     if (xnge4this.getIsStepFinished()) {
       println("Leap: isFinished! index=" + index)
       listeners.foreach(_.apply(new ActionFinished(this, Instant.now)))

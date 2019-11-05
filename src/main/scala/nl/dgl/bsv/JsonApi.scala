@@ -17,23 +17,24 @@ import nl.dgl.ptb.dsl.ActionSelect
 import jdk.nashorn.internal.parser.JSONParser
 import org.http4s.server.middleware.Jsonp
 import org.apache.tinkerpop.shaded.jackson.core.JsonParser
+import scala.concurrent.Future
 
 object JsonApi {
 
-  def getActions(action: Action, parent: Action, predecessor: Action): List[(Action, Action, Action)] = {
+  def getLinkedActions(action: Action, parent: Action, predecessor: Action): List[(Action, Action, Action)] = {
     val thisAction = List((action, parent, predecessor));
     action match {
       case Process(top, index) => {
-        return thisAction ++ getActions(top, action, predecessor);
+        return thisAction ++ getLinkedActions(top, action, predecessor);
       }
       case ActionSequential(before, after, index) => {
-        val beforeActionList = getActions(before, action, null)
+        val beforeActionList = getLinkedActions(before, action, null)
         val lastBeforeAction = beforeActionList.reverse.head._1
-        val afterActionList = getActions(after, action, lastBeforeAction)
+        val afterActionList = getLinkedActions(after, action, lastBeforeAction)
         return beforeActionList ++ afterActionList
       }
       case ActionSplit(splitListKey, splitItemKey, splitItemResultKey, splitResultsKey, actionToSplit, index) => {
-        return thisAction ++ getActions(actionToSplit, action, null)
+        return thisAction ++ getLinkedActions(actionToSplit, action, null)
       }
       case ActionSelect(filter, index) => {
         return thisAction
@@ -50,10 +51,11 @@ object JsonApi {
   }
 
   def getProcessJsonApi(process: Process): String = {
-    val actionList = getActions(process, null, null);
+    val actionList = getLinkedActions(process, null, null);
     val actionsAsJsonApi = actionList.map(x => getActionJsonApi(x._1, x._2, x._3)).mkString(",")
     val result = s"""{ "data" : [ $actionsAsJsonApi ] } """;
-
+    val actions = actionList.map(_._1)
+    val whatever = Future(JsonApiAsync.pushStateOfActions(actions))
     return result;
   }
 
