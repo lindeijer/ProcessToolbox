@@ -38,51 +38,15 @@ import nl.dgl.ptb.dsl.ExchangeHashMap
 import nl.dgl.ptb.ui.swing.ProcessOverView
 
 import cats.effect._
-// import cats.effect._
-
 import cats.implicits._
-// import cats.implicits._
 
 import org.http4s.server.blaze.BlazeServerBuilder
-// import org.http4s.server.blaze.BlazeServerBuilder
-
 import org.http4s.server.staticcontent._
-// import org.http4s.server.staticcontent._
-
 import org.http4s.syntax.kleisli._
-// import org.http4s.syntax.kleisli._
 
-object MES_4_CLIENT extends Frame with IOApp {
+import org.http4s.headers.`Content-Type`
 
-  val blockingEc = ExecutionContext.fromExecutorService(Executors.newFixedThreadPool(4))
-
-  val pathToDist = "../../../workspace-ember/ember-quickstart2/dist"
-  val pathToIndex = pathToDist + "/index.html"
-
-  val ccc = new File(pathToIndex)
-
-  println("ccc.canRead()=" + ccc.canRead())
-  println("ccc.getAbsolutePath()xx=" + ccc.getAbsolutePath())
-
-  val theService = HttpRoutes.of[IO] {
-    //case GET -> Root / "hello" / name         => Ok(s"Hello, $name.")
-    case GET -> Root / "actions" => Ok(getJsonApi(), `Content-Type`(MediaType.application.`vnd.api+json`))
-    //case request @ GET -> Root / "index.html" => StaticFile.fromFile(new File(pathToIndex), blockingEc, Some(request)).getOrElseF(NotFound()) // In case the file doesn't exist
-  }.orNotFound
-
-  import org.http4s.server.middleware._
-
-  val corsService = CORS(theService)
-
-  def run(args: List[String]): IO[ExitCode] =
-    BlazeServerBuilder[IO]
-      .bindHttp(8080, "localhost")
-      //.withHttpApp(helloWorldService)
-      .withHttpApp(corsService)
-      .serve
-      .compile
-      .drain
-      .as(ExitCode.Success)
+object MES_4_CLIENT extends Frame {
 
   //////////////////
 
